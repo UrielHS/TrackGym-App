@@ -639,12 +639,12 @@
             
             const now = new Date();
             const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            // Fecha hace 7 días en formato YYYY-MM-DD (sin conversión de timezone)
+            const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
             
             gymData.forEach(session => {
-                const sessionDate = new Date(session.date);
-                sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-                
-                if(sessionDate >= sevenDaysAgo) {
+                // Comparar directamente string YYYY-MM-DD evita bugs de timezone
+                if(session.date >= sevenDaysAgoStr) {
                     session.exercises.forEach(ex => {
                         const normMuscle = normalize(ex.muscle);
                         for (const [key, aliases] of Object.entries(muscleAliases)) {
@@ -1504,6 +1504,23 @@
             }
         }
 
+        function deleteRoutineExercise(id) {
+            if(!confirm("¿Eliminar este ejercicio de la rutina permanentemente?")) return;
+            window.routineData.active = window.routineData.active.filter(ex => ex.id !== id);
+            renderRoutine();
+            if (window.saveRoutineToDB) window.saveRoutineToDB();
+            showToast("🗑️ Ejercicio eliminado");
+        }
+
+        function deleteArchivedRoutineExercise(id) {
+            if(!confirm("¿Eliminar este ejercicio del archivo permanentemente?")) return;
+            window.routineData.archived = window.routineData.archived.filter(ex => ex.id !== id);
+            renderRoutine();
+            if (window.saveRoutineToDB) window.saveRoutineToDB();
+            showToast("🗑️ Ejercicio eliminado del archivo");
+        }
+
+
         function renderRoutine() {
             // Render Active
             const container = document.getElementById('routineDaysContainer');
@@ -1524,9 +1541,14 @@
                                 <p class="text-sm font-bold text-gray-200">${ex.name}</p>
                                 <p class="text-[10px] uppercase font-bold text-primary tracking-wider">${ex.muscle}</p>
                             </div>
-                            <button onclick="archiveRoutineExercise('${ex.id}')" class="text-gray-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-900/20" title="Archivar/Quitar">
-                                <i class="ph ph-archive box-border text-lg"></i>
-                            </button>
+                            <div class="flex gap-1">
+                                <button onclick="archiveRoutineExercise('${ex.id}')" class="text-gray-500 hover:text-yellow-400 transition-colors p-2 rounded-lg hover:bg-yellow-900/20" title="Archivar">
+                                    <i class="ph ph-archive-box text-lg"></i>
+                                </button>
+                                <button onclick="deleteRoutineExercise('${ex.id}')" class="text-gray-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-900/20" title="Eliminar">
+                                    <i class="ph ph-trash text-lg"></i>
+                                </button>
+                            </div>
                         </div>
                     `).join('');
 
@@ -1559,7 +1581,12 @@
                                 <p class="text-sm font-bold text-gray-400 line-through">${ex.name}</p>
                                 <p class="text-xs text-gray-500">${ex.day} • ${ex.muscle}</p>
                             </div>
-                            <span class="text-[10px] font-bold uppercase text-gray-500 bg-gray-800 px-2 py-1 rounded-md tracking-wider">Retirado: ${formattedDate}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-bold uppercase text-gray-500 bg-gray-800 px-2 py-1 rounded-md tracking-wider">Retirado: ${formattedDate}</span>
+                                <button onclick="deleteArchivedRoutineExercise('${ex.id}')" class="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-900/20" title="Eliminar definitivamente">
+                                    <i class="ph ph-trash text-base"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
