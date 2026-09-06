@@ -942,6 +942,9 @@
                 // Si la sesión se quedó sin ejercicios, borramos la sesión completa
                 if(gymData[sessionIndex].exercises.length === 0) {
                     gymData.splice(sessionIndex, 1);
+                    if(window.deleteSessionFromDB) {
+                        window.deleteSessionFromDB(date);
+                    }
                 }
                 
                 if(window.saveToDB) window.saveToDB();
@@ -1615,6 +1618,14 @@
                         } catch(e) {
                             console.error("Error inesperado guardando:", e);
                             showToast("❌ Error de red");
+                        }
+                    };
+
+                    window.deleteSessionFromDB = async (date) => {
+                        try {
+                            await supabase.from('gym_sessions').delete().eq('date', date);
+                        } catch(e) {
+                            console.error("Error eliminando sesión de Supabase:", e);
                         }
                     };
 
