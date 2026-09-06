@@ -489,16 +489,35 @@
             let countWithTime = 0;
             gymData.forEach(s => {
                 if(s.duration) {
-                    totalMins += parseInt(s.duration);
-                    countWithTime++;
+                    let mins = 0;
+                    if(typeof s.duration === 'string' && s.duration.includes(':')) {
+                        const parts = s.duration.split(':').map(Number);
+                        if(parts.length === 3) {
+                            mins = parts[0] * 60 + parts[1] + (parts[2] || 0) / 60;
+                        } else if (parts.length === 2) {
+                            mins = parts[0] + (parts[1] || 0) / 60;
+                        }
+                    } else {
+                        mins = parseFloat(s.duration) || 0;
+                    }
+                    if(mins > 0) {
+                        totalMins += mins;
+                        countWithTime++;
+                    }
                 }
             });
             
             const statTime = document.getElementById('avgTimeStat');
             if (statTime) {
                 if(countWithTime > 0) {
-                    const avg = Math.round(totalMins / countWithTime);
-                    statTime.innerText = `${avg} min`;
+                    const avgMins = totalMins / countWithTime;
+                    const hrs = Math.floor(avgMins / 60);
+                    const mins = Math.floor(avgMins % 60);
+                    if (hrs > 0) {
+                        statTime.innerText = `${hrs}h ${mins}m`;
+                    } else {
+                        statTime.innerText = `${mins} min`;
+                    }
                 } else {
                     statTime.innerText = `-- min`;
                 }
@@ -509,19 +528,24 @@
             const session = gymData.find(s => s.date === date);
             if(!session) return;
             const currentDuration = session.duration || '';
-            const newDuration = prompt(`Ingresa la duración total del entrenamiento del ${date} en minutos (ej. 90):`, currentDuration);
+            const newDuration = prompt(`Ingresa el tiempo del entrenamiento (Formato HH:MM:SS o MM:SS):`, currentDuration);
             
             if(newDuration !== null) {
-                const parsed = parseInt(newDuration);
-                if(!isNaN(parsed) && parsed > 0) {
-                    session.duration = parsed;
-                    if(window.saveToDB) window.saveToDB();
-                    if(window.refreshUI) window.refreshUI();
-                    showToast("⏱️ Tiempo guardado");
-                } else if (newDuration.trim() === '') {
+                const trimmed = newDuration.trim();
+                if (trimmed === '') {
                     delete session.duration;
                     if(window.saveToDB) window.saveToDB();
                     if(window.refreshUI) window.refreshUI();
+                } else {
+                    // Validar formato básico (ej. 01:25:30 o 45:00) o que al menos sea un numero
+                    if(/^(\d+:)?\d+:\d+$/.test(trimmed) || !isNaN(parseFloat(trimmed))) {
+                        session.duration = trimmed;
+                        if(window.saveToDB) window.saveToDB();
+                        if(window.refreshUI) window.refreshUI();
+                        showToast("⏱️ Tiempo guardado");
+                    } else {
+                        alert("Formato inválido. Por favor usa HH:MM:SS (ej. 01:25:30) o MM:SS (ej. 45:00)");
+                    }
                 }
             }
         }
@@ -879,7 +903,8 @@
                     `;
                 }).join('');
 
-                const durationBadge = `<button onclick="editDuration('${session.date}')" class="text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors flex items-center border border-gray-700 shadow-sm"><i class="ph ph-timer mr-1.5 text-primary"></i> ${session.duration ? session.duration + ' min' : 'Añadir tiempo'}</button>`;
+                const displayTime = session.duration ? (String(session.duration).includes(':') ? session.duration : session.duration + ' min') : 'Añadir tiempo';
+                const durationBadge = `<button onclick="editDuration('${session.date}')" class="text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors flex items-center border border-gray-700 shadow-sm"><i class="ph ph-timer mr-1.5 text-primary"></i> ${displayTime}</button>`;
                 
                 const card = document.createElement('div');
                 card.className = "glass-card rounded-xl p-5 shadow-lg border border-gray-800 mb-6";
