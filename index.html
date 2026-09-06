@@ -1610,28 +1610,40 @@
                     window.saveToDB = async () => {
                         try {
                             const payload = window.gymData.map(s => {
-                                // Clonar los ejercicios para no mutar el estado local directamente
                                 const exercisesCopy = JSON.parse(JSON.stringify(s.exercises));
-                                // Guardar el 'duration' dentro del JSONB de exercises para evitar errores de esquema en Supabase
                                 if (exercisesCopy.length > 0 && s.duration) {
                                     exercisesCopy[0]._sessionDuration = s.duration;
                                 }
-                                return {
-                                    date: s.date,
-                                    exercises: exercisesCopy
-                                };
+                                return { date: s.date, exercises: exercisesCopy };
                             });
 
-                            const { error } = await supabase
+                            // Estrategia: borrar TODO en Supabase y re-insertar el estado actual.
+                            // Esto garantiza que los registros eliminados localmente también desaparezcan de la nube.
+                            const { error: deleteError } = await supabase
                                 .from('gym_sessions')
-                                .upsert(payload, { onConflict: 'date' }); 
-                                
-                            if (error) {
-                                console.error("Error guardando en Supabase:", error);
-                                showToast("❌ Error al sincronizar con la nube");
+                                .delete()
+                                .neq('date', 'NO_BORRAR_NADA'); // Condición siempre falsa = borra todo
+
+                            if (deleteError) {
+                                console.error("Error limpiando Supabase antes de guardar:", deleteError);
+                                showToast("❌ Error al sincronizar");
+                                return;
+                            }
+
+                            if (payload.length > 0) {
+                                const { error: insertError } = await supabase
+                                    .from('gym_sessions')
+                                    .insert(payload);
+
+                                if (insertError) {
+                                    console.error("Error guardando en Supabase:", insertError);
+                                    showToast("❌ Error al sincronizar con la nube");
+                                } else {
+                                    console.log("Guardado en Supabase exitoso.");
+                                    showToast("☁️ Sesión sincronizada");
+                                }
                             } else {
-                                console.log("Guardado en Supabase exitoso.");
-                                showToast("☁️ Sesión sincronizada");
+                                showToast("☁️ Nube sincronizada (vacía)");
                             }
                         } catch(e) {
                             console.error("Error inesperado guardando:", e);
