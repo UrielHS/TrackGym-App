@@ -626,6 +626,16 @@
             
             const muscles = ['Pecho', 'Espalda', 'Hombro', 'Pierna', 'Bicep', 'Tricep'];
             const counts = { 'Pecho':0, 'Espalda':0, 'Hombro':0, 'Pierna':0, 'Bicep':0, 'Tricep':0 };
+
+            const normalize = str => str ? str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+            const muscleAliases = {
+                'Pecho': ['pecho', 'chest', 'pectoral', 'pectorales'],
+                'Espalda': ['espalda', 'dorsal', 'dorsales', 'back'],
+                'Hombro': ['hombro', 'hombros', 'deltoides', 'deltoide', 'shoulder'],
+                'Pierna': ['pierna', 'piernas', 'leg', 'legs', 'cuadricep', 'cuadriceps', 'gluteo', 'gluteos', 'isquio'],
+                'Bicep': ['bicep', 'biceps', 'bicepss'],
+                'Tricep': ['tricep', 'triceps']
+            };
             
             const now = new Date();
             const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
@@ -636,8 +646,12 @@
                 
                 if(sessionDate >= sevenDaysAgo) {
                     session.exercises.forEach(ex => {
-                        if(counts[ex.muscle] !== undefined) {
-                            counts[ex.muscle] += ex.sets.filter(s => !s.isDropSet).length;
+                        const normMuscle = normalize(ex.muscle);
+                        for (const [key, aliases] of Object.entries(muscleAliases)) {
+                            if (aliases.includes(normMuscle)) {
+                                counts[key] += ex.sets.filter(s => !s.isDropSet).length;
+                                break;
+                            }
                         }
                     });
                 }
@@ -732,28 +746,28 @@
             const ctx = canvas.getContext('2d');
 
             let labels = [];
-            let dataPoints = [];
+            let maxWeightPoints = [];
+            let avgWeightPoints = [];
 
-            // Filtrar y ordenar
+            // Filtrar y ordenar por fecha ascendente
             gymData.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(session => {
                 const ex = session.exercises.find(e => e.name.toLowerCase() === selectedExercise.toLowerCase());
                 if (ex) {
-                    // Calculadora 1RM usando la fórmula de Epley: Peso * (1 + Reps / 30)
-                    let max1RM = 0;
-                    ex.sets.forEach(s => {
-                        const w = convertToKg(s.weight, s.unit);
-                        const current1RM = s.reps > 1 ? w * (1 + s.reps / 30) : w;
-                        if(current1RM > max1RM) max1RM = current1RM;
-                    });
-                    
+                    // Calcular peso máximo y promedio de la sesión (solo series no Drop Set)
+                    const mainSets = ex.sets.filter(s => !s.isDropSet);
+                    if (mainSets.length === 0) return;
+
+                    const weights = mainSets.map(s => convertToKg(s.weight, s.unit));
+                    const maxW = Math.max(...weights);
+                    const avgW = weights.reduce((a, b) => a + b, 0) / weights.length;
+
                     const dateObj = new Date(session.date);
-                    // Ajustar por timezone
                     dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
                     const formattedDate = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-                    
+
                     labels.push(formattedDate);
-                    // Redondear a 1 decimal
-                    dataPoints.push(parseFloat(max1RM.toFixed(1)));
+                    maxWeightPoints.push(parseFloat(maxW.toFixed(1)));
+                    avgWeightPoints.push(parseFloat(avgW.toFixed(1)));
                 }
             });
 
@@ -766,35 +780,54 @@
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: `1RM Estimado (KG)`,
-                        data: dataPoints,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#10b981',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        fill: true,
-                        tension: 0.3
-                    }]
+                    datasets: [
+                        {
+                            label: 'Peso Máximo (kg)',
+                            data: maxWeightPoints,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Peso Promedio (kg)',
+                            data: avgWeightPoints,
+                            borderColor: '#10b981',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 4],
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false,
+                            tension: 0.3
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false },
+                        legend: { 
+                            display: true,
+                            labels: { color: '#9ca3af', boxWidth: 12, usePointStyle: true }
+                        },
                         tooltip: {
                             backgroundColor: 'rgba(30, 30, 30, 0.9)',
-                            titleFont: { size: 14 },
-                            bodyFont: { size: 14, weight: 'bold' },
+                            titleFont: { size: 13 },
+                            bodyFont: { size: 13, weight: 'bold' },
                             padding: 12,
-                            displayColors: false,
                             callbacks: {
                                 label: function(context) {
-                                    return `1RM Estimado: ${context.parsed.y} KG`;
+                                    return `${context.dataset.label}: ${context.parsed.y} kg`;
                                 }
                             }
                         }
@@ -802,12 +835,12 @@
                     scales: {
                         y: {
                             beginAtZero: false,
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { callback: v => v + ' kg' }
                         },
-                        x: {
-                            grid: { display: false }
-                        }
+                        x: { grid: { display: false } }
                     }
+
                 }
             });
         }
