@@ -621,7 +621,7 @@
                 if(sessionDate >= sevenDaysAgo) {
                     session.exercises.forEach(ex => {
                         if(counts[ex.muscle] !== undefined) {
-                            counts[ex.muscle] += ex.sets.length;
+                            counts[ex.muscle] += ex.sets.filter(s => !s.isDropSet).length;
                         }
                     });
                 }
