@@ -1299,8 +1299,13 @@
                     let recordsAdded = 0;
 
                     json.forEach(row => {
+                        // Tolerar variaciones comunes de los nombres de columnas
+                        const repsField = row['Repeticiones'] !== undefined ? row['Repeticiones'] : row['Repeticion'];
+                        const weightField = row['Peso'] !== undefined ? row['Peso'] : row['Pesos'];
+                        const dropSetField = row['Es Drop Set'] || row['Es DropSet'] || row['Drop Set'] || 'No';
+
                         // Validar campos mínimos
-                        if(!row['Ejercicio'] || !row['Repeticiones'] || !row['Peso']) return;
+                        if(!row['Ejercicio'] || repsField === undefined || weightField === undefined) return;
 
                         let dateStr = row['Fecha'];
                         
@@ -1323,17 +1328,19 @@
                         if(!importedData[dateStr][exName]) {
                             importedData[dateStr][exName] = {
                                 muscle: row['Grupo Muscular'] || 'Otro',
-                                note: row['Notas'] || '',
-                                duration: row['Tiempo'] || row['Tiempo (Duración)'] || '',
+                                note: row['Notas'] || row['Nota'] || '',
+                                duration: row['Tiempo'] || row['Tiempo (Duración)'] || row['Duracion'] || '',
                                 sets: []
                             };
                         }
                         
+                        const isDS = String(dropSetField).toLowerCase().trim();
+                        
                         importedData[dateStr][exName].sets.push({
-                            reps: parseInt(row['Repeticiones']),
-                            weight: parseFloat(row['Peso']),
+                            reps: parseInt(repsField),
+                            weight: parseFloat(weightField),
                             unit: (row['Unidad'] || 'kg').toLowerCase(),
-                            isDropSet: row['Es Drop Set'] === 'Sí' || String(row['Es Drop Set']).toLowerCase() === 'true'
+                            isDropSet: isDS === 'sí' || isDS === 'si' || isDS === 'true' || isDS === 'yes'
                         });
                         recordsAdded++;
                     });
