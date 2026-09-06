@@ -1131,54 +1131,53 @@
 
         function addSetRow() {
             const container = document.getElementById('setsContainer');
-            const rowCount = container.children.length + 1;
-            
-            const row = document.createElement('div');
-            row.className = "flex items-center gap-2 md:gap-3 set-row mt-3";
-            row.innerHTML = `
-                <span class="text-gray-500 font-bold w-6">#${rowCount}</span>
-                <div class="flex-1">
-                    <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-primary reps-input">
+            const rowCount = container.querySelectorAll('.set-group').length + 1;
+            const div = document.createElement('div');
+            div.className = "set-group mb-2";
+            div.innerHTML = `
+                <div class="flex items-center gap-2 md:gap-3 set-row main-set">
+                    <span class="text-gray-500 font-bold w-6 set-number">#${rowCount}</span>
+                    <div class="flex-1">
+                        <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
+                    </div>
+                    <span class="text-gray-500">x</span>
+                    <div class="flex-1 relative flex">
+                        <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
+                        <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
+                            <option value="kg">kg</option>
+                            <option value="lbs">lbs</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
                 </div>
-                <span class="text-gray-500">x</span>
+                <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
+            `;
+            container.appendChild(div);
+        }
+
+        window.addDropSet = function(btn) {
+            const group = btn.closest('.set-group');
+            const container = group.querySelector('.drop-sets-container');
+            container.classList.remove('hidden');
+            
+            const dropDiv = document.createElement('div');
+            dropDiv.className = "flex items-center gap-2 md:gap-3 set-row drop-set";
+            dropDiv.innerHTML = `
+                <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
+                <div class="flex-1">
+                    <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2.5 text-white text-sm focus:border-accent outline-none reps-input">
+                </div>
+                <span class="text-gray-500 text-xs">x</span>
                 <div class="flex-1 relative flex">
-                    <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm focus:outline-none focus:border-primary weight-input border-r-0">
-                    <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm focus:outline-none focus:border-primary unit-select cursor-pointer">
+                    <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-accent outline-none weight-input">
+                    <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-accent unit-select">
                         <option value="kg">kg</option>
                         <option value="lbs">lbs</option>
                     </select>
                 </div>
-                <button type="button" onclick="removeSetRow(this)" class="text-danger hover:text-red-400 p-2">
-                    <i class="ph ph-trash text-lg"></i>
-                </button>
+                <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
             `;
-            container.appendChild(row);
-            updateRemoveButtons();
-        }
-
-        function removeSetRow(btn) {
-            const container = document.getElementById('setsContainer');
-            if(container.children.length > 1) {
-                btn.closest('.set-row').remove();
-                // Renumber
-                Array.from(container.children).forEach((row, index) => {
-                    row.querySelector('span.w-6').innerText = `#${index + 1}`;
-                });
-                updateRemoveButtons();
-            }
-        }
-
-        function updateRemoveButtons() {
-            const container = document.getElementById('setsContainer');
-            const rows = container.querySelectorAll('.set-row');
-            const firstBtn = rows[0].querySelector('button');
-            if(rows.length === 1) {
-                firstBtn.disabled = true;
-                firstBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                firstBtn.disabled = false;
-                firstBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+            container.appendChild(dropDiv);
         }
 
         function handleAddSubmit(e) {
@@ -1190,11 +1189,21 @@
             const note = document.getElementById('inputNote') ? document.getElementById('inputNote').value : '';
             
             const sets = [];
-            document.querySelectorAll('.set-row').forEach(row => {
-                const reps = parseInt(row.querySelector('.reps-input').value);
-                const weight = parseFloat(row.querySelector('.weight-input').value);
-                const unit = row.querySelector('.unit-select').value;
-                sets.push({ reps, weight, unit }); // Guarda la unidad exacta de la serie
+            document.querySelectorAll('.set-group').forEach(group => {
+                const mainRow = group.querySelector('.main-set');
+                if (mainRow) {
+                    const r = parseInt(mainRow.querySelector('.reps-input').value);
+                    const w = parseFloat(mainRow.querySelector('.weight-input').value);
+                    const u = mainRow.querySelector('.unit-select').value;
+                    if(!isNaN(r) && !isNaN(w)) sets.push({ reps: r, weight: w, unit: u, isDropSet: false });
+                }
+                const dropRows = group.querySelectorAll('.drop-set');
+                dropRows.forEach(dropRow => {
+                    const r = parseInt(dropRow.querySelector('.reps-input').value);
+                    const w = parseFloat(dropRow.querySelector('.weight-input').value);
+                    const u = dropRow.querySelector('.unit-select').value;
+                    if(!isNaN(r) && !isNaN(w)) sets.push({ reps: r, weight: w, unit: u, isDropSet: true });
+                });
             });
 
             let session = gymData.find(s => s.date === date);
@@ -1207,29 +1216,30 @@
 
             document.getElementById('inputName').value = '';
             if (document.getElementById('inputNote')) document.getElementById('inputNote').value = '';
+            
             document.getElementById('setsContainer').innerHTML = `
-                <div class="flex items-center gap-2 md:gap-3 set-row">
-                    <span class="text-gray-500 font-bold w-6">#1</span>
-                    <div class="flex-1">
-                        <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-primary reps-input">
+                <div class="set-group mb-2">
+                    <div class="flex items-center gap-2 md:gap-3 set-row main-set">
+                        <span class="text-gray-500 font-bold w-6 set-number">#1</span>
+                        <div class="flex-1">
+                            <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
+                        </div>
+                        <span class="text-gray-500">x</span>
+                        <div class="flex-1 relative flex">
+                            <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
+                            <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
+                                <option value="kg">kg</option>
+                                <option value="lbs">lbs</option>
+                            </select>
+                        </div>
+                        <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
                     </div>
-                    <span class="text-gray-500">x</span>
-                    <div class="flex-1 relative flex">
-                        <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm focus:outline-none focus:border-primary weight-input border-r-0">
-                        <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm focus:outline-none focus:border-primary unit-select cursor-pointer">
-                            <option value="kg">kg</option>
-                            <option value="lbs">lbs</option>
-                        </select>
-                    </div>
-                    <button type="button" onclick="removeSetRow(this)" class="text-danger hover:text-red-400 p-2 opacity-50 cursor-not-allowed" disabled>
-                        <i class="ph ph-trash"></i>
-                    </button>
+                    <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
                 </div>
             `;
-
+            
             if(window.saveToDB) window.saveToDB();
-
-            showToast('¡Ejercicio guardado exitosamente!');
+            showToast("✅ Ejercicio guardado");
         }
 
         function exportExcel() {
