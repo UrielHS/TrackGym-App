@@ -158,6 +158,24 @@
                 <p class="text-gray-400">Analiza tu fuerza y recibe sugerencias de sobrecarga.</p>
             </header>
 
+            <!-- Estadísticas Rápidas -->
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-darker border border-gray-800 p-4 rounded-xl flex items-center shadow-sm">
+                    <div class="bg-primary/20 p-3 rounded-lg text-primary mr-4 hidden md:block"><i class="ph ph-timer text-2xl"></i></div>
+                    <div>
+                        <p class="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wider">Tiempo Promedio</p>
+                        <p id="avgTimeStat" class="text-lg md:text-xl font-bold text-white">-- min</p>
+                    </div>
+                </div>
+                <div class="bg-darker border border-gray-800 p-4 rounded-xl flex items-center shadow-sm">
+                    <div class="bg-accent/20 p-3 rounded-lg text-accent mr-4 hidden md:block"><i class="ph ph-barbell text-2xl"></i></div>
+                    <div>
+                        <p class="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wider">Sesiones Totales</p>
+                        <p id="totalSessionsStat" class="text-lg md:text-xl font-bold text-white">0</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- NUEVO: Mapeo de Fatiga -->
             <div class="mb-8">
                 <h3 class="text-xl font-bold mb-3 flex items-center"><i class="ph ph-activity text-accent mr-2"></i> Estado de Recuperación (Últimas 72h)</h3>
@@ -453,11 +471,58 @@
             if(tabId === 'history') renderHistory();
             if(tabId === 'routine') renderRoutine();
             if(tabId === 'dashboard') {
+                updateQuickStats();
                 populateExerciseSelect();
                 updateChart();
                 updateVolumeChart();
                 updateFatigue();
                 generateSuggestions();
+            }
+        }
+
+        function updateQuickStats() {
+            const totalSessions = gymData.length;
+            const statTotal = document.getElementById('totalSessionsStat');
+            if (statTotal) statTotal.innerText = totalSessions;
+            
+            let totalMins = 0;
+            let countWithTime = 0;
+            gymData.forEach(s => {
+                if(s.duration) {
+                    totalMins += parseInt(s.duration);
+                    countWithTime++;
+                }
+            });
+            
+            const statTime = document.getElementById('avgTimeStat');
+            if (statTime) {
+                if(countWithTime > 0) {
+                    const avg = Math.round(totalMins / countWithTime);
+                    statTime.innerText = `${avg} min`;
+                } else {
+                    statTime.innerText = `-- min`;
+                }
+            }
+        }
+
+        window.editDuration = function(date) {
+            const session = gymData.find(s => s.date === date);
+            if(!session) return;
+            const currentDuration = session.duration || '';
+            const newDuration = prompt(`Ingresa la duración total del entrenamiento del ${date} en minutos (ej. 90):`, currentDuration);
+            
+            if(newDuration !== null) {
+                const parsed = parseInt(newDuration);
+                if(!isNaN(parsed) && parsed > 0) {
+                    session.duration = parsed;
+                    if(window.saveToDB) window.saveToDB();
+                    if(window.refreshUI) window.refreshUI();
+                    showToast("⏱️ Tiempo guardado");
+                } else if (newDuration.trim() === '') {
+                    delete session.duration;
+                    if(window.saveToDB) window.saveToDB();
+                    if(window.refreshUI) window.refreshUI();
+                }
             }
         }
 
@@ -814,12 +879,17 @@
                     `;
                 }).join('');
 
+                const durationBadge = `<button onclick="editDuration('${session.date}')" class="text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors flex items-center border border-gray-700 shadow-sm"><i class="ph ph-timer mr-1.5 text-primary"></i> ${session.duration ? session.duration + ' min' : 'Añadir tiempo'}</button>`;
+                
                 const card = document.createElement('div');
-                card.className = "glass-card rounded-xl p-5 shadow-lg border border-gray-800";
+                card.className = "glass-card rounded-xl p-5 shadow-lg border border-gray-800 mb-6";
                 card.innerHTML = `
-                    <h3 class="text-lg font-bold capitalize text-white mb-4 flex items-center">
-                        <i class="ph ph-calendar-blank mr-2 text-gray-400"></i> ${formattedDate}
-                    </h3>
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                        <h3 class="text-lg font-bold capitalize text-white flex items-center">
+                            <i class="ph ph-calendar-blank mr-2 text-gray-400"></i> ${formattedDate}
+                        </h3>
+                        ${durationBadge}
+                    </div>
                     <div class="bg-darker rounded-lg px-4 border border-gray-800">
                         ${exercisesHTML}
                     </div>
@@ -875,8 +945,8 @@
 
             document.getElementById('editModalContent').innerHTML = `
                 <div class="mb-4 pb-3 border-b border-gray-800">
-                    <p class="text-primary font-bold text-lg">${ex.name}</p>
-                    <p class="text-gray-400 text-xs uppercase tracking-wider">${date} • ${ex.muscle}</p>
+                    <input type="text" id="editExerciseName" value="${ex.name}" class="w-full bg-transparent text-primary font-bold text-lg outline-none border-b border-dashed border-primary/50 focus:border-primary focus:bg-gray-800/50 p-1 mb-1 rounded transition-colors">
+                    <p class="text-gray-400 text-xs uppercase tracking-wider pl-1">${date} • ${ex.muscle}</p>
                 </div>
                 <div id="editSetsContainer">${setsHtml}</div>
                 <button type="button" onclick="addEditSetRow()" class="text-primary text-sm font-medium hover:text-blue-400 mt-2 flex items-center mb-4">
@@ -933,10 +1003,13 @@
             });
             
             const noteInput = document.getElementById('editNote');
+            const nameInput = document.getElementById('editExerciseName');
             
             if(newSets.length > 0) {
                 ex.sets = newSets;
                 if(noteInput) ex.note = noteInput.value;
+                if(nameInput && nameInput.value.trim() !== '') ex.name = nameInput.value.trim();
+                
                 if(window.saveToDB) window.saveToDB();
                 if(window.refreshUI) window.refreshUI();
                 closeEditModal();
