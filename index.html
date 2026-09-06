@@ -882,7 +882,14 @@
                 const formattedDate = dateObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
                 
                 let exercisesHTML = session.exercises.map((ex, index) => {
-                    let setsStr = ex.sets.map(s => `${s.reps}x${formatDisplayWeight(s.weight, s.unit)}`).join(' | ');
+                    let setsStr = '';
+                    ex.sets.forEach(s => {
+                        if(s.isDropSet) {
+                            setsStr += ` <span class="text-accent text-xs">↘ ${s.reps}x${formatDisplayWeight(s.weight, s.unit)}</span>`;
+                        } else {
+                            setsStr += (setsStr ? ' | ' : '') + `${s.reps}x${formatDisplayWeight(s.weight, s.unit)}`;
+                        }
+                    });
                     let noteHtml = ex.note ? `<div class="mt-2 text-xs text-gray-400 bg-gray-800/50 p-2 rounded-lg border border-gray-700/50 flex items-start"><i class="ph ph-note-pencil mr-1.5 mt-0.5 text-primary"></i><span>${ex.note}</span></div>` : '';
                     return `
                         <div class="py-3 border-b border-gray-800 last:border-0 group relative">
@@ -951,22 +958,58 @@
             const session = gymData.find(s => s.date === date);
             const ex = session.exercises[index];
             
-            let setsHtml = ex.sets.map((s, i) => `
-                <div class="flex items-center gap-2 mb-3 edit-set-row">
-                    <span class="text-gray-500 font-bold w-6">#${i+1}</span>
-                    <div class="flex-1">
-                        <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
+            let setsHtml = '';
+            let currentGroup = 0;
+            ex.sets.forEach((s, i) => {
+                if(!s.isDropSet) {
+                    currentGroup++;
+                    setsHtml += `
+                    <div class="set-group mb-2 border-b border-gray-800/50 pb-2">
+                        <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
+                            <span class="text-gray-500 font-bold w-6">#${currentGroup}</span>
+                            <div class="flex-1">
+                                <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
+                            </div>
+                            <span class="text-gray-500">x</span>
+                            <div class="flex-1 relative flex">
+                                <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
+                                <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
+                                    <option value="kg" ${s.unit==='kg'?'selected':''}>kg</option>
+                                    <option value="lbs" ${s.unit==='lbs'?'selected':''}>lbs</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3">
+                    `;
+                } else {
+                    setsHtml += `
+                            <div class="flex items-center gap-2 edit-set-row drop-set">
+                                <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
+                                <div class="flex-1">
+                                    <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
+                                </div>
+                                <span class="text-gray-500 text-xs">x</span>
+                                <div class="flex-1 relative flex">
+                                    <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
+                                    <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
+                                        <option value="kg" ${s.unit==='kg'?'selected':''}>kg</option>
+                                        <option value="lbs" ${s.unit==='lbs'?'selected':''}>lbs</option>
+                                    </select>
+                                </div>
+                                <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
+                            </div>
+                    `;
+                }
+                
+                const nextItem = ex.sets[i+1];
+                if (!nextItem || !nextItem.isDropSet) {
+                    setsHtml += `
+                        </div>
+                        <button type="button" onclick="addEditDropSet(this)" class="text-xs text-accent mt-1 ml-3"><i class="ph ph-plus"></i> Drop Set</button>
                     </div>
-                    <span class="text-gray-500">x</span>
-                    <div class="flex-1 relative flex">
-                        <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
-                        <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
-                            <option value="kg" ${s.unit==='kg'?'selected':''}>kg</option>
-                            <option value="lbs" ${s.unit==='lbs'?'selected':''}>lbs</option>
-                        </select>
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                }
+            });
 
             document.getElementById('editModalContent').innerHTML = `
                 <div class="mb-4 pb-3 border-b border-gray-800">
@@ -987,24 +1030,51 @@
 
         window.addEditSetRow = function() {
             const container = document.getElementById('editSetsContainer');
-            const rowCount = container.children.length + 1;
+            const rowCount = container.querySelectorAll('.set-group').length + 1;
             const div = document.createElement('div');
-            div.className = "flex items-center gap-2 mb-3 edit-set-row";
+            div.className = "set-group mb-2 border-b border-gray-800/50 pb-2";
             div.innerHTML = `
-                <span class="text-gray-500 font-bold w-6">#${rowCount}</span>
-                <div class="flex-1">
-                    <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
+                <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
+                    <span class="text-gray-500 font-bold w-6">#${rowCount}</span>
+                    <div class="flex-1">
+                        <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
+                    </div>
+                    <span class="text-gray-500">x</span>
+                    <div class="flex-1 relative flex">
+                        <input type="number" step="0.1" value="" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
+                        <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
+                            <option value="kg">kg</option>
+                            <option value="lbs">lbs</option>
+                        </select>
+                    </div>
                 </div>
-                <span class="text-gray-500">x</span>
+                <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
+                <button type="button" onclick="addEditDropSet(this)" class="text-xs text-accent mt-1 ml-3"><i class="ph ph-plus"></i> Drop Set</button>
+            `;
+            container.appendChild(div);
+        }
+
+        window.addEditDropSet = function(btn) {
+            const container = btn.parentElement.querySelector('.drop-sets-container');
+            container.classList.remove('hidden');
+            const dropDiv = document.createElement('div');
+            dropDiv.className = "flex items-center gap-2 edit-set-row drop-set mb-2";
+            dropDiv.innerHTML = `
+                <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
+                <div class="flex-1">
+                    <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
+                </div>
+                <span class="text-gray-500 text-xs">x</span>
                 <div class="flex-1 relative flex">
-                    <input type="number" step="0.1" value="" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
-                    <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
+                    <input type="number" step="0.1" value="" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
+                    <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
                         <option value="kg">kg</option>
                         <option value="lbs">lbs</option>
                     </select>
                 </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
             `;
-            container.appendChild(div);
+            container.appendChild(dropDiv);
         }
 
         window.closeEditModal = function() {
@@ -1016,15 +1086,27 @@
             if(!session) return;
             const ex = session.exercises[editCurrentIndex];
             
-            const rows = document.querySelectorAll('.edit-set-row');
+            const groups = document.querySelectorAll('#editSetsContainer .set-group');
             let newSets = [];
-            rows.forEach(row => {
-                const r = row.querySelector('.edit-reps').value;
-                const w = row.querySelector('.edit-weight').value;
-                const u = row.querySelector('.edit-unit').value;
-                if(r && w) {
-                    newSets.push({ reps: parseInt(r), weight: parseFloat(w), unit: u });
+            groups.forEach(group => {
+                const mainRow = group.querySelector('.main-set');
+                if (mainRow) {
+                    const r = mainRow.querySelector('.edit-reps').value;
+                    const w = mainRow.querySelector('.edit-weight').value;
+                    const u = mainRow.querySelector('.edit-unit').value;
+                    if(r && w) {
+                        newSets.push({ reps: parseInt(r), weight: parseFloat(w), unit: u, isDropSet: false });
+                    }
                 }
+                const dropRows = group.querySelectorAll('.drop-set');
+                dropRows.forEach(dropRow => {
+                    const r = dropRow.querySelector('.edit-reps').value;
+                    const w = dropRow.querySelector('.edit-weight').value;
+                    const u = dropRow.querySelector('.edit-unit').value;
+                    if(r && w) {
+                        newSets.push({ reps: parseInt(r), weight: parseFloat(w), unit: u, isDropSet: true });
+                    }
+                });
             });
             
             const noteInput = document.getElementById('editNote');
@@ -1165,6 +1247,7 @@
                             'Repeticiones': set.reps,
                             'Peso': set.weight,
                             'Unidad': (set.unit || 'kg').toLowerCase(),
+                            'Es Drop Set': set.isDropSet ? 'Sí' : 'No',
                             'Notas': ex.note || ''
                         });
                     });
@@ -1238,7 +1321,8 @@
                         importedData[dateStr][exName].sets.push({
                             reps: parseInt(row['Repeticiones']),
                             weight: parseFloat(row['Peso']),
-                            unit: (row['Unidad'] || 'kg').toLowerCase()
+                            unit: (row['Unidad'] || 'kg').toLowerCase(),
+                            isDropSet: row['Es Drop Set'] === 'Sí' || String(row['Es Drop Set']).toLowerCase() === 'true'
                         });
                         recordsAdded++;
                     });
