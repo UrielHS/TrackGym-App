@@ -397,6 +397,15 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Zona de Peligro -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl border border-red-900/40">
+                    <h3 class="text-xl font-bold mb-1 flex items-center text-red-400"><i class="ph ph-warning-octagon mr-2"></i> Zona de Peligro</h3>
+                    <p class="text-sm text-gray-500 mb-6">Estas acciones son permanentes y no se pueden deshacer. Descarga un respaldo en Excel antes de continuar.</p>
+                    <button onclick="deleteAllRecords()" class="w-full flex items-center justify-center py-3 bg-red-900/30 hover:bg-red-900/60 border border-red-800 rounded-lg text-red-400 font-semibold transition-colors">
+                        <i class="ph ph-trash mr-2 text-lg"></i> Eliminar Todos los Registros
+                    </button>
+                </div>
             </div>
         </section>
     </main>
@@ -625,26 +634,38 @@
             if(!ctx) return;
             
             const muscles = ['Pecho', 'Espalda', 'Hombro', 'Pierna', 'Bicep', 'Tricep'];
-            const counts = { 'Pecho':0, 'Espalda':0, 'Hombro':0, 'Pierna':0, 'Bicep':0, 'Tricep':0 };
+            const counts = { 'Pecho': 0, 'Espalda': 0, 'Hombro': 0, 'Pierna': 0, 'Bicep': 0, 'Tricep': 0 };
 
             const normalize = str => str ? str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
             const muscleAliases = {
                 'Pecho': ['pecho', 'chest', 'pectoral', 'pectorales'],
                 'Espalda': ['espalda', 'dorsal', 'dorsales', 'back'],
                 'Hombro': ['hombro', 'hombros', 'deltoides', 'deltoide', 'shoulder'],
-                'Pierna': ['pierna', 'piernas', 'leg', 'legs', 'cuadricep', 'cuadriceps', 'gluteo', 'gluteos', 'isquio'],
+                'Pierna': ['pierna', 'piernas', 'leg', 'legs', 'cuadricep', 'cuadriceps', 'gluteo', 'gluteos', 'isquio', 'isquiotibiales', 'talon', 'talones'],
                 'Bicep': ['bicep', 'biceps', 'bicepss'],
                 'Tricep': ['tricep', 'triceps']
             };
             
-            const now = new Date();
-            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-            // Fecha hace 7 días en formato YYYY-MM-DD (sin conversión de timezone)
-            const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+            if (gymData.length === 0) return;
+
+            // 1. Encontrar la fecha más reciente registrada en todo el historial
+            const dates = gymData.map(s => s.date).sort();
+            const latestDateStr = dates[dates.length - 1]; // Ej: última fecha con datos
             
+            // 2. Calcular el rango de 7 días tomando como ancla la fecha más reciente (o 'hoy' si es más reciente)
+            const latestRecordedDate = new Date(latestDateStr + 'T00:00:00');
+            const today = new Date();
+            
+            // Si la última sesión fue hace menos de 7 días, usamos hoy como ancla; si son datos históricos, usamos la última sesión
+            const anchorDate = (today - latestRecordedDate) < (7 * 24 * 60 * 60 * 1000) ? today : latestRecordedDate;
+            
+            const sevenDaysBefore = new Date(anchorDate.getTime() - (6 * 24 * 60 * 60 * 1000));
+            const startStr = sevenDaysBefore.toISOString().split('T')[0];
+            const endStr = anchorDate.toISOString().split('T')[0];
+            
+            // 3. Contabilizar series efectivas
             gymData.forEach(session => {
-                // Comparar directamente string YYYY-MM-DD evita bugs de timezone
-                if(session.date >= sevenDaysAgoStr) {
+                if(session.date >= startStr && session.date <= endStr) {
                     session.exercises.forEach(ex => {
                         const normMuscle = normalize(ex.muscle);
                         for (const [key, aliases] of Object.entries(muscleAliases)) {
@@ -657,25 +678,36 @@
                 }
             });
 
-            if (volumeChartInstance) volumeChartInstance.destroy();
+        if (volumeChartInstance) volumeChartInstance.destroy();
 
             volumeChartInstance = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: muscles,
                     datasets: [{
-                        label: 'Series (Últimos 7 días)',
+                        label: `Series efectivas (${startStr} a ${endStr})`,
                         data: muscles.map(m => counts[m]),
                         backgroundColor: '#10b981',
-                        borderRadius: 4
+                        borderRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.parsed.y} series efectivas`
+                            }
+                        }
+                    },
                     scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { stepSize: 2 } },
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                            ticks: { stepSize: 2, precision: 0 } 
+                        },
                         x: { grid: { display: false } }
                     }
                 }
@@ -1630,6 +1662,22 @@
             setTimeout(() => {
                 inputName.classList.remove('bg-blue-900/30', 'border-primary');
             }, 500);
+        }
+
+        // Eliminar todos los registros
+        function deleteAllRecords() {
+            if(!confirm("⚠️ ¿Estás seguro? Esta acción borrará TODOS tus registros de la nube y localmente. Se recomienda descargar un respaldo primero.")) return;
+            if(!confirm("🔴 Última confirmación: ¿Realmente quieres borrar todo tu historial?")) return;
+
+            gymData = [];
+            localStorage.removeItem('hypertrack_gymData');
+
+            if(window.saveToDB) {
+                window.saveToDB();
+            }
+
+            if(window.refreshUI) window.refreshUI();
+            showToast("🗑️ Todos los registros eliminados");
         }
 
         // Init
