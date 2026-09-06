@@ -1580,7 +1580,12 @@
                         .order('date', { ascending: false });
                         
                     if (data && data.length > 0) {
-                        window.gymData = data;
+                        window.gymData = data.map(s => {
+                            if (s.exercises && s.exercises.length > 0 && s.exercises[0]._sessionDuration) {
+                                s.duration = s.exercises[0]._sessionDuration;
+                            }
+                            return s;
+                        });
                         if (window.refreshUI) window.refreshUI();
                         showToast("☁️ Sesiones cargadas");
                     } else if (error) {
@@ -1604,9 +1609,22 @@
                     // Sobrescribir la función de guardado (Sesiones)
                     window.saveToDB = async () => {
                         try {
+                            const payload = window.gymData.map(s => {
+                                // Clonar los ejercicios para no mutar el estado local directamente
+                                const exercisesCopy = JSON.parse(JSON.stringify(s.exercises));
+                                // Guardar el 'duration' dentro del JSONB de exercises para evitar errores de esquema en Supabase
+                                if (exercisesCopy.length > 0 && s.duration) {
+                                    exercisesCopy[0]._sessionDuration = s.duration;
+                                }
+                                return {
+                                    date: s.date,
+                                    exercises: exercisesCopy
+                                };
+                            });
+
                             const { error } = await supabase
                                 .from('gym_sessions')
-                                .upsert(window.gymData, { onConflict: 'date' }); 
+                                .upsert(payload, { onConflict: 'date' }); 
                                 
                             if (error) {
                                 console.error("Error guardando en Supabase:", error);
