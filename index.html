@@ -932,26 +932,31 @@
         }
 
         // --- LÓGICA DE EDICIÓN Y ELIMINACIÓN ---
-        window.deleteExercise = function(date, index) {
+        window.deleteExercise = async function(date, index) {
             if(!confirm("¿Estás seguro de que quieres eliminar este ejercicio de tu historial?")) return;
             
             let sessionIndex = gymData.findIndex(s => s.date === date);
             if(sessionIndex > -1) {
                 gymData[sessionIndex].exercises.splice(index, 1);
                 
-                // Si la sesión se quedó sin ejercicios, borramos la sesión completa
+                // Si el día quedó vacío, eliminamos la sesión entera
                 if(gymData[sessionIndex].exercises.length === 0) {
                     gymData.splice(sessionIndex, 1);
                     if(window.deleteSessionFromDB) {
-                        window.deleteSessionFromDB(date);
+                        await window.deleteSessionFromDB(date);
+                    }
+                } else {
+                    // Si aún quedan ejercicios ese día, actualizamos solo esa fila
+                    if(window.saveSingleSessionToDB) {
+                        await window.saveSingleSessionToDB(gymData[sessionIndex]);
                     }
                 }
                 
-                if(window.saveToDB) window.saveToDB();
+                localStorage.setItem('hypertrack_gymData', JSON.stringify(gymData));
                 if(window.refreshUI) window.refreshUI();
                 showToast("🗑️ Registro eliminado");
             }
-        }
+        };
 
         let editCurrentDate = null;
         let editCurrentIndex = null;
@@ -1561,121 +1566,122 @@
     </script>
 
     <!-- MÓDULO DE BASE DE DATOS (SUPABASE) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // 1. Reemplaza estas variables con tus credenciales de Supabase
-        const SUPABASE_URL = 'TU_URL_DE_SUPABASE_AQUI';
-        const SUPABASE_ANON_KEY = 'TU_ANON_KEY_DE_SUPABASE_AQUI';
-        
-        try {
-            // Solo inicializamos si se han puesto las credenciales
-            if(SUPABASE_URL !== 'TU_URL_DE_SUPABASE_AQUI') {
-                const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                
-                const initDB = async () => {
-                    // Obtener los datos existentes desde Supabase (Sesiones)
-                    const { data, error } = await supabase
-                        .from('gym_sessions')
-                        .select('date, exercises')
-                        .order('date', { ascending: false });
-                        
-                    if (data && data.length > 0) {
-                        window.gymData = data.map(s => {
-                            if (s.exercises && s.exercises.length > 0 && s.exercises[0]._sessionDuration) {
-                                s.duration = s.exercises[0]._sessionDuration;
-                            }
-                            return s;
-                        });
-                        if (window.refreshUI) window.refreshUI();
-                        showToast("☁️ Sesiones cargadas");
-                    } else if (error) {
-                        console.error("Error al cargar datos:", error);
-                        showToast("❌ Error al cargar sesiones");
-                    }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    // 1. Pega aquí los valores obtenidos de Supabase
+    const SUPABASE_URL = 'https://qremwdvbhqvzbxtecvpj.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyZW13ZHZiaHF2emJ4dGVjdnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NDAyMDQsImV4cCI6MjEwNDIxNjIwNH0.gdEx2Lg8pZYKUHahtLs9n87yso6Y8jym7X58oZ-_dbk';
 
-                    // Obtener rutina existente
-                    const { data: rData, error: rError } = await supabase
-                        .from('gym_routines')
-                        .select('data')
-                        .eq('id', 'my_routine')
-                        .single();
+    // Cargar respaldo local de inmediato mientras conecta la nube
+    const cached = localStorage.getItem('hypertrack_gymData');
+    if (cached) {
+        try { gymData = JSON.parse(cached); } catch(e) {}
+    }
 
-                    if (rData && rData.data) {
-                        window.routineData = rData.data;
-                        if (window.renderRoutine) window.renderRoutine();
-                        showToast("☁️ Rutina cargada");
-                    }
+    try {
+        if (SUPABASE_URL !== 'TU_URL_DE_SUPABASE_AQUI' && !SUPABASE_URL.includes('tu-id-de-proyecto')) {
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-                    // Sobrescribir la función de guardado (Sesiones)
-                    window.saveToDB = async () => {
-                        try {
-                            const payload = window.gymData.map(s => {
-                                const exercisesCopy = JSON.parse(JSON.stringify(s.exercises));
-                                if (exercisesCopy.length > 0 && s.duration) {
-                                    exercisesCopy[0]._sessionDuration = s.duration;
-                                }
-                                return { date: s.date, exercises: exercisesCopy };
-                            });
+            const initDB = async () => {
+                // 1. Obtener sesiones desde Supabase
+                const { data, error } = await supabase
+                    .from('gym_sessions')
+                    .select('date, exercises')
+                    .order('date', { ascending: false });
 
-                            // Estrategia: borrar TODO en Supabase y re-insertar el estado actual.
-                            // Esto garantiza que los registros eliminados localmente también desaparezcan de la nube.
-                            const { error: deleteError } = await supabase
-                                .from('gym_sessions')
-                                .delete()
-                                .neq('date', 'NO_BORRAR_NADA'); // Condición siempre falsa = borra todo
-
-                            if (deleteError) {
-                                console.error("Error limpiando Supabase antes de guardar:", deleteError);
-                                showToast("❌ Error al sincronizar");
-                                return;
-                            }
-
-                            if (payload.length > 0) {
-                                const { error: insertError } = await supabase
-                                    .from('gym_sessions')
-                                    .insert(payload);
-
-                                if (insertError) {
-                                    console.error("Error guardando en Supabase:", insertError);
-                                    showToast("❌ Error al sincronizar con la nube");
-                                } else {
-                                    console.log("Guardado en Supabase exitoso.");
-                                    showToast("☁️ Sesión sincronizada");
-                                }
-                            } else {
-                                showToast("☁️ Nube sincronizada (vacía)");
-                            }
-                        } catch(e) {
-                            console.error("Error inesperado guardando:", e);
-                            showToast("❌ Error de red");
+                if (data && !error) {
+                    window.gymData = data.map(s => {
+                        if (s.exercises && s.exercises.length > 0 && s.exercises[0]._sessionDuration) {
+                            s.duration = s.exercises[0]._sessionDuration;
                         }
-                    };
+                        return s;
+                    });
+                    localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
+                    if (window.refreshUI) window.refreshUI();
+                    showToast("☁️ Sesiones sincronizadas");
+                }
 
-                    window.deleteSessionFromDB = async (date) => {
-                        try {
-                            await supabase.from('gym_sessions').delete().eq('date', date);
-                        } catch(e) {
-                            console.error("Error eliminando sesión de Supabase:", e);
+                // 2. Obtener rutina activa/archivada
+                const { data: rData } = await supabase
+                    .from('gym_routines')
+                    .select('data')
+                    .eq('id', 'my_routine')
+                    .single();
+
+                if (rData && rData.data) {
+                    window.routineData = rData.data;
+                    if (window.renderRoutine) window.renderRoutine();
+                }
+
+                // 3. Guardado atómico de sesión individual (Evita race conditions)
+                window.saveSingleSessionToDB = async (session) => {
+                    try {
+                        const exercisesCopy = JSON.parse(JSON.stringify(session.exercises));
+                        if (exercisesCopy.length > 0 && session.duration) {
+                            exercisesCopy[0]._sessionDuration = session.duration;
                         }
-                    };
-
-                    // Guardado de la rutina
-                    window.saveRoutineToDB = async () => {
-                        try {
-                            const { error } = await supabase
-                                .from('gym_routines')
-                                .upsert({ id: 'my_routine', data: window.routineData }, { onConflict: 'id' });
-                            if(error) console.error("Error guardando rutina:", error);
-                        } catch(e) { console.error(e); }
-                    };
+                        await supabase
+                            .from('gym_sessions')
+                            .upsert({ date: session.date, exercises: exercisesCopy }, { onConflict: 'date' });
+                    } catch(e) {
+                        console.error("Error al guardar sesión individual:", e);
+                    }
                 };
-                initDB();
-            } else {
-                console.log("Supabase inactivo. Faltan credenciales. Trabajando en modo local.");
-            }
-        } catch (e) { 
-            console.log("Error inicializando Supabase:", e); 
+
+                // 4. Eliminación puntual por fecha
+                window.deleteSessionFromDB = async (date) => {
+                    try {
+                        const { error } = await supabase
+                            .from('gym_sessions')
+                            .delete()
+                            .eq('date', date);
+                        if (error) console.error("Error al borrar en Supabase:", error);
+                    } catch(e) {
+                        console.error("Error de conexión al borrar:", e);
+                    }
+                };
+
+                // 5. Guardado global (para importación de Excel o creación de sesiones)
+                window.saveToDB = async () => {
+                    try {
+                        localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
+
+                        const payload = window.gymData.map(s => {
+                            const copy = JSON.parse(JSON.stringify(s.exercises));
+                            if (copy.length > 0 && s.duration) copy[0]._sessionDuration = s.duration;
+                            return { date: s.date, exercises: copy };
+                        });
+
+                        if (payload.length > 0) {
+                            const { error } = await supabase
+                                .from('gym_sessions')
+                                .upsert(payload, { onConflict: 'date' });
+                            if (error) throw error;
+                        }
+                        showToast("☁️ Datos sincronizados");
+                    } catch(e) {
+                        console.error("Error sincronizando:", e);
+                        showToast("⚠️ Guardado localmente");
+                    }
+                };
+
+                // 6. Guardado de rutina
+                window.saveRoutineToDB = async () => {
+                    try {
+                        await supabase
+                            .from('gym_routines')
+                            .upsert({ id: 'my_routine', data: window.routineData }, { onConflict: 'id' });
+                    } catch(e) {
+                        console.error("Error guardando rutina:", e);
+                    }
+                };
+            };
+
+            initDB();
+        } else {
+            console.log("Supabase inactivo: coloca tus credenciales para sincronizar en la nube.");
         }
-    </script>
-</body>
-</html>
+    } catch (e) {
+        console.error("Error inicializando Supabase:", e);
+    }
+</script>
