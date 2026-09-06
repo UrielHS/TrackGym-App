@@ -85,7 +85,7 @@
         }
     </style>
 </head>
-<body class="h-screen flex flex-col md:flex-row overflow-hidden">
+<body class="h-[100dvh] flex flex-col md:flex-row overflow-hidden">
 
     <!-- Sidebar / Bottom Nav -->
     <nav class="bg-card border-b md:border-b-0 md:border-r border-gray-800 w-full md:w-64 flex-shrink-0 z-10 flex md:flex-col justify-between order-last md:order-first">
@@ -348,11 +348,11 @@
                             <div class="set-group mb-2">
                                 <div class="flex items-center gap-2 md:gap-3 set-row main-set">
                                     <span class="text-gray-500 font-bold w-6 set-number">#1</span>
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
                                     </div>
                                     <span class="text-gray-500">x</span>
-                                    <div class="flex-1 relative flex">
+                                    <div class="flex-[1.2] relative flex min-w-0">
                                         <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
                                         <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
                                             <option value="kg">kg</option>
@@ -975,7 +975,7 @@
                                 <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
                             </div>
                             <span class="text-gray-500">x</span>
-                            <div class="flex-1 relative flex">
+                            <div class="flex-[1.2] relative flex min-w-0">
                                 <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
                                 <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
                                     <option value="kg" ${s.unit==='kg'?'selected':''}>kg</option>
@@ -989,11 +989,11 @@
                     setsHtml += `
                             <div class="flex items-center gap-2 edit-set-row drop-set">
                                 <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-                                <div class="flex-1">
+                                <div class="flex-1 min-w-0">
                                     <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
                                 </div>
                                 <span class="text-gray-500 text-xs">x</span>
-                                <div class="flex-1 relative flex">
+                                <div class="flex-[1.2] relative flex min-w-0">
                                     <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
                                     <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
                                         <option value="kg" ${s.unit==='kg'?'selected':''}>kg</option>
@@ -1040,11 +1040,11 @@
             div.innerHTML = `
                 <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
                     <span class="text-gray-500 font-bold w-6">#${rowCount}</span>
-                    <div class="flex-1">
+                    <div class="flex-1 min-w-0">
                         <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
                     </div>
                     <span class="text-gray-500">x</span>
-                    <div class="flex-1 relative flex">
+                    <div class="flex-[1.2] relative flex min-w-0">
                         <input type="number" step="0.1" value="" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
                         <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
                             <option value="kg">kg</option>
@@ -1065,11 +1065,11 @@
             dropDiv.className = "flex items-center gap-2 edit-set-row drop-set mb-2";
             dropDiv.innerHTML = `
                 <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                     <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
                 </div>
                 <span class="text-gray-500 text-xs">x</span>
-                <div class="flex-1 relative flex">
+                <div class="flex-[1.2] relative flex min-w-0">
                     <input type="number" step="0.1" value="" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
                     <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
                         <option value="kg">kg</option>
@@ -1140,11 +1140,11 @@
             div.innerHTML = `
                 <div class="flex items-center gap-2 md:gap-3 set-row main-set">
                     <span class="text-gray-500 font-bold w-6 set-number">#${rowCount}</span>
-                    <div class="flex-1">
+                    <div class="flex-1 min-w-0">
                         <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
                     </div>
                     <span class="text-gray-500">x</span>
-                    <div class="flex-1 relative flex">
+                    <div class="flex-[1.2] relative flex min-w-0">
                         <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
                         <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
                             <option value="kg">kg</option>
@@ -1167,11 +1167,11 @@
             dropDiv.className = "flex items-center gap-2 md:gap-3 set-row drop-set";
             dropDiv.innerHTML = `
                 <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                     <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2.5 text-white text-sm focus:border-accent outline-none reps-input">
                 </div>
                 <span class="text-gray-500 text-xs">x</span>
-                <div class="flex-1 relative flex">
+                <div class="flex-[1.2] relative flex min-w-0">
                     <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-accent outline-none weight-input">
                     <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-accent unit-select">
                         <option value="kg">kg</option>
@@ -1224,11 +1224,11 @@
                 <div class="set-group mb-2">
                     <div class="flex items-center gap-2 md:gap-3 set-row main-set">
                         <span class="text-gray-500 font-bold w-6 set-number">#1</span>
-                        <div class="flex-1">
+                        <div class="flex-1 min-w-0">
                             <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
                         </div>
                         <span class="text-gray-500">x</span>
-                        <div class="flex-1 relative flex">
+                        <div class="flex-[1.2] relative flex min-w-0">
                             <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
                             <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
                                 <option value="kg">kg</option>
