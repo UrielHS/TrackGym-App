@@ -565,11 +565,27 @@
             
             const muscles = ['Pecho', 'Espalda', 'Hombro', 'Pierna', 'Bicep', 'Tricep'];
             const now = new Date();
+
+            // Normalizar texto: minúsculas + quitar tildes
+            const normalize = str => str ? str.toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+
+            // Mapa de variantes aceptadas para cada grupo muscular
+            const muscleAliases = {
+                'Pecho': ['pecho', 'chest', 'pectoral', 'pectorales'],
+                'Espalda': ['espalda', 'dorsal', 'dorsales', 'back'],
+                'Hombro': ['hombro', 'hombros', 'deltoides', 'deltoide', 'shoulder'],
+                'Pierna': ['pierna', 'piernas', 'leg', 'legs', 'cuadricep', 'cuadriceps', 'gluteo', 'gluteos', 'isquio'],
+                'Bicep': ['bicep', 'biceps', 'bicepss'],
+                'Tricep': ['tricep', 'triceps']
+            };
             
             muscles.forEach(muscle => {
                 let lastDate = null;
+                const aliases = muscleAliases[muscle] || [normalize(muscle)];
+
                 gymData.forEach(session => {
-                    if(session.exercises.some(e => e.muscle === muscle)) {
+                    if(session.exercises.some(e => aliases.includes(normalize(e.muscle)))) {
                         const sessionDate = new Date(session.date);
                         sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
                         if(!lastDate || sessionDate > lastDate) lastDate = sessionDate;
