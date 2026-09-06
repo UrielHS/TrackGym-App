@@ -169,6 +169,49 @@
             </div>
         </div>
 
+        <div id="editRoutineModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
+            <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white">Editar Ejercicio de Rutina</h3>
+                    <button onclick="closeEditRoutineModal()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <input type="hidden" id="editRoutineId">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Día de la semana</label>
+                        <select id="editRoutineDay" class="w-full bg-dark border border-gray-700 text-white rounded-lg p-3 outline-none focus:border-primary transition-colors">
+                            <option value="Lunes">Lunes</option>
+                            <option value="Martes">Martes</option>
+                            <option value="Miércoles">Miércoles</option>
+                            <option value="Jueves">Jueves</option>
+                            <option value="Viernes">Viernes</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Grupo Muscular</label>
+                        <select id="editRoutineMuscle" class="w-full bg-dark border border-gray-700 text-white rounded-lg p-3 outline-none focus:border-primary transition-colors">
+                            <option value="Pecho">Pecho</option>
+                            <option value="Espalda">Espalda</option>
+                            <option value="Pierna">Pierna</option>
+                            <option value="Hombro">Hombro</option>
+                            <option value="Bicep">Bícep</option>
+                            <option value="Tricep">Trícep</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre del Ejercicio</label>
+                        <input type="text" id="editRoutineName" class="w-full bg-dark border border-gray-700 text-white rounded-lg p-3 outline-none focus:border-primary transition-colors" placeholder="Ej. Press de Banca">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button onclick="closeEditRoutineModal()" class="px-4 py-2 rounded-lg text-gray-400 hover:text-white font-semibold">Cancelar</button>
+                    <button onclick="saveEditRoutine()" class="bg-primary hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-bold transition-colors">Guardar</button>
+                </div>
+            </div>
+        </div>
+
         <!-- DASHBOARD TAB -->
         <section id="dashboard" class="tab-content active max-w-6xl mx-auto">
             <header class="mb-8">
@@ -1149,7 +1192,7 @@
                     setsHtml += `
                     <div class="set-group mb-2 border-b border-gray-800/50 pb-2">
                         <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
-                            <span class="text-gray-500 font-bold w-6">#${currentGroup}</span>
+                            <span class="text-gray-500 font-bold w-6 edit-set-number">#${currentGroup}</span>
                             <div class="flex-1">
                                 <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
                             </div>
@@ -1161,6 +1204,7 @@
                                     <option value="lbs" ${s.unit==='lbs'?'selected':''}>lbs</option>
                                 </select>
                             </div>
+                            <button type="button" onclick="this.closest('.set-group').remove(); window.recalcEditSets()" class="text-gray-600 hover:text-red-400 p-1 ml-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
                         </div>
                         <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3">
                     `;
@@ -1211,6 +1255,16 @@
             document.getElementById('editExerciseModal').classList.remove('hidden');
         }
 
+        window.recalcEditSets = function() {
+            const container = document.getElementById('editSetsContainer');
+            if(container) {
+                const numbers = container.querySelectorAll('.edit-set-number');
+                numbers.forEach((span, idx) => {
+                    span.innerText = '#' + (idx + 1);
+                });
+            }
+        };
+
         window.addEditSetRow = function() {
             const container = document.getElementById('editSetsContainer');
             const rowCount = container.querySelectorAll('.set-group').length + 1;
@@ -1218,7 +1272,7 @@
             div.className = "set-group mb-2 border-b border-gray-800/50 pb-2";
             div.innerHTML = `
                 <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
-                    <span class="text-gray-500 font-bold w-6">#${rowCount}</span>
+                    <span class="text-gray-500 font-bold w-6 edit-set-number">#${rowCount}</span>
                     <div class="flex-1 min-w-0">
                         <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
                     </div>
@@ -1230,6 +1284,7 @@
                             <option value="lbs">lbs</option>
                         </select>
                     </div>
+                    <button type="button" onclick="this.closest('.set-group').remove(); window.recalcEditSets()" class="text-gray-600 hover:text-red-400 p-1 ml-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
                 </div>
                 <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
                 <button type="button" onclick="addEditDropSet(this)" class="text-xs text-accent mt-1 ml-3"><i class="ph ph-plus"></i> Drop Set</button>
@@ -1311,6 +1366,16 @@
 
         document.getElementById('inputDate').valueAsDate = new Date();
 
+        window.recalcSets = function() {
+            const container = document.getElementById('setsContainer');
+            if(container) {
+                const numbers = container.querySelectorAll('.set-number');
+                numbers.forEach((span, idx) => {
+                    span.innerText = '#' + (idx + 1);
+                });
+            }
+        };
+
         function addSetRow() {
             const container = document.getElementById('setsContainer');
             const rowCount = container.querySelectorAll('.set-group').length + 1;
@@ -1331,6 +1396,7 @@
                         </select>
                     </div>
                     <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
+                    <button type="button" onclick="this.closest('.set-group').remove(); window.recalcSets()" class="text-gray-600 hover:text-red-400 p-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
                 </div>
                 <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
             `;
@@ -1617,6 +1683,47 @@
             showToast("Ejercicio añadido al plan");
         }
 
+        function openEditRoutineModal(id) {
+            const ex = window.routineData.active.find(e => e.id === id);
+            if(!ex) return;
+            
+            document.getElementById('editRoutineId').value = ex.id;
+            document.getElementById('editRoutineDay').value = ex.day;
+            document.getElementById('editRoutineMuscle').value = ex.muscle;
+            document.getElementById('editRoutineName').value = ex.name;
+            
+            document.getElementById('editRoutineModal').classList.remove('hidden');
+        }
+
+        function closeEditRoutineModal() {
+            document.getElementById('editRoutineModal').classList.add('hidden');
+        }
+
+        function saveEditRoutine() {
+            const id = document.getElementById('editRoutineId').value;
+            const ex = window.routineData.active.find(e => e.id === id);
+            if(!ex) return;
+            
+            const newDay = document.getElementById('editRoutineDay').value;
+            const newMuscle = document.getElementById('editRoutineMuscle').value;
+            const newName = document.getElementById('editRoutineName').value;
+            
+            if(!newName.trim()) {
+                alert("El nombre del ejercicio no puede estar vacío.");
+                return;
+            }
+            
+            ex.day = newDay;
+            ex.muscle = newMuscle;
+            ex.name = newName.trim();
+            
+            renderRoutine();
+            if (window.saveRoutineToDB) window.saveRoutineToDB();
+            
+            closeEditRoutineModal();
+            showToast("✏️ Ejercicio actualizado");
+        }
+
         function archiveRoutineExercise(id) {
             const idx = window.routineData.active.findIndex(ex => ex.id === id);
             if(idx > -1) {
@@ -1667,6 +1774,9 @@
                                 <p class="text-[10px] uppercase font-bold text-primary tracking-wider">${ex.muscle}</p>
                             </div>
                             <div class="flex gap-1">
+                                <button onclick="openEditRoutineModal('${ex.id}')" class="text-gray-500 hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-blue-900/20" title="Editar">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                </button>
                                 <button onclick="archiveRoutineExercise('${ex.id}')" class="text-gray-500 hover:text-yellow-400 transition-colors p-2 rounded-lg hover:bg-yellow-900/20" title="Archivar">
                                     <i class="ph ph-archive-box text-lg"></i>
                                 </button>
