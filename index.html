@@ -370,27 +370,38 @@
 
         <!-- ADD TAB -->
         <section id="add" class="tab-content max-w-3xl mx-auto">
-            <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 class="text-3xl font-bold mb-2 flex items-center">
-                        Nuevo Registro
-                        <span id="workoutTimer" class="ml-4 text-lg bg-darker px-3 py-1 rounded-full border border-gray-700 text-primary hidden"><i class="ph ph-timer mr-1"></i> <span id="workoutTimerText">00:00:00</span></span>
-                    </h2>
-                    <p class="text-gray-400">Añade ejercicios a tu sesión de hoy.</p>
-                </div>
-                <div id="workoutControls" class="flex gap-2">
-                    <button type="button" onclick="startWorkout()" class="bg-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-colors">
-                        <i class="ph ph-play-circle mr-2 text-xl"></i> Iniciar Entrenamiento
-                    </button>
-                    <!-- Stop buttons hidden by default -->
-                    <button type="button" id="btnFinishWorkout" onclick="finishWorkout()" class="hidden bg-accent hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-colors shadow-lg shadow-accent/20">
-                        <i class="ph ph-check-circle mr-2 text-xl"></i> Finalizar
-                    </button>
-                    <button type="button" id="btnCancelWorkout" onclick="cancelWorkout()" class="hidden bg-darker hover:bg-red-900/40 border border-gray-700 hover:border-red-800 text-red-400 font-bold py-2 px-4 rounded-lg flex items-center transition-colors">
-                        <i class="ph ph-x-circle text-xl"></i>
-                    </button>
-                </div>
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold mb-2">Nuevo Registro</h2>
+                <p class="text-gray-400">Añade ejercicios a tu sesión de hoy.</p>
             </header>
+
+            <!-- Workout Session Flow UI -->
+            <div id="startWorkoutPanel" class="mb-6">
+                <button type="button" onclick="startWorkout()" class="w-full bg-darker hover:bg-gray-800 border border-primary/50 text-primary font-bold py-4 rounded-xl transition-colors flex justify-center items-center text-lg shadow-lg">
+                    <i class="ph ph-play-circle mr-2 text-2xl"></i> Iniciar Entrenamiento
+                </button>
+            </div>
+
+            <div id="activeWorkoutPanel" class="mb-6 bg-darker border border-gray-800 rounded-xl p-4 hidden shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent"></div>
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-red-500/20 text-red-500 p-2 rounded-full animate-pulse flex items-center justify-center">
+                            <i class="ph ph-record text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Entrenamiento en Curso</p>
+                            <p id="workoutTimerDisplay" class="text-xl md:text-2xl font-mono font-bold text-white tracking-wider">00:00:00</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="finishWorkout()" class="bg-accent hover:bg-green-600 text-white font-bold py-2 px-3 md:px-4 rounded-lg transition-colors flex items-center shadow-lg shadow-accent/20">
+                        <i class="ph ph-check-square mr-1.5 md:mr-2 text-lg"></i> <span class="hidden md:inline">Finalizar Entrenamiento</span><span class="md:hidden">Finalizar</span>
+                    </button>
+                </div>
+                <div id="activeWorkoutList" class="mt-4 space-y-2 border-t border-gray-800 pt-4 hidden">
+                    <!-- Items del entrenamiento actual -->
+                </div>
+            </div>
 
             <div class="glass-card rounded-2xl p-6 shadow-xl">
                 <!-- Sugerencias Inteligentes -->
@@ -424,30 +435,34 @@
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-400 mb-1">Nombre del Ejercicio</label>
                         <input type="text" id="inputName" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
-                        
-                        <!-- GHOST HISTORY CARD -->
-                        <div id="ghostHistoryCard" class="hidden mt-3 bg-darker border border-primary/30 rounded-xl p-4 shadow-lg relative overflow-hidden">
-                            <div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h5 class="text-primary font-bold text-xs uppercase tracking-wider flex items-center"><i class="ph ph-ghost mr-1"></i> Última Vez</h5>
-                                    <p id="ghostDate" class="text-gray-400 text-xs mt-0.5"></p>
-                                </div>
-                                <div class="text-right">
-                                    <p id="ghostPR" class="text-white font-bold text-sm"></p>
-                                    <p class="text-gray-500 text-[10px] uppercase tracking-wider">Mejor Serie</p>
-                                </div>
-                            </div>
-                            <p id="ghostSetsSummary" class="text-gray-300 text-sm mb-3 italic"></p>
-                            <button type="button" onclick="copyGhostSets()" class="w-full bg-primary/20 hover:bg-primary/40 text-primary border border-primary/30 py-2 rounded-lg text-xs font-bold flex justify-center items-center transition-colors">
-                                <i class="ph ph-copy mr-1.5 text-sm"></i> Copiar pesos a esta sesión
-                            </button>
-                        </div>
                     </div>
 
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-400 mb-1">Notas (Opcional)</label>
                         <textarea id="inputNote" rows="2" placeholder="Ej. Me costó la última serie..." class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors resize-none"></textarea>
+                    </div>
+
+                    <!-- ASISTENTE GHOST -->
+                    <div id="ghostHistoryCard" class="hidden bg-darker border border-gray-700 rounded-xl p-4 mb-6 relative overflow-hidden shadow-lg">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
+                        <div class="flex justify-between items-start mb-3 pl-2">
+                            <div>
+                                <h4 class="text-accent font-bold text-sm flex items-center"><i class="ph ph-ghost mr-1.5 text-lg"></i> Asistente de Carga</h4>
+                                <p id="ghostDateText" class="text-xs text-gray-400 mt-0.5">Última vez: --</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-0.5">Top Set</p>
+                                <p id="ghostMaxText" class="text-sm font-bold text-white">--</p>
+                            </div>
+                        </div>
+                        <div class="bg-dark p-2.5 rounded-lg border border-gray-800 mb-3 ml-2">
+                            <p id="ghostSetsText" class="text-xs text-gray-300 font-mono leading-relaxed"></p>
+                        </div>
+                        <div class="pl-2">
+                            <button type="button" onclick="copyGhostSets()" class="text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-2 rounded-lg transition-colors flex items-center border border-gray-700 w-full justify-center">
+                                <i class="ph ph-copy mr-1.5 text-primary text-lg"></i> Copiar pesos a esta sesión
+                            </button>
+                        </div>
                     </div>
 
                     <div class="bg-darker p-4 rounded-xl border border-gray-800 mb-6">
@@ -485,16 +500,6 @@
                     </button>
                 </form>
             </div>
-            
-            <!-- Active Workout List -->
-            <div id="activeWorkoutContainer" class="hidden mt-8">
-                <h3 class="text-xl font-bold mb-4 flex items-center border-b border-gray-800 pb-2">
-                    <i class="ph ph-list-numbers text-accent mr-2"></i> Ejercicios en esta Sesión
-                </h3>
-                <div id="activeWorkoutList" class="space-y-3">
-                    <!-- Dynamic active exercises -->
-                </div>
-            </div>
         </section>
 
         <!-- SETTINGS TAB -->
@@ -505,43 +510,6 @@
             </header>
 
             <div class="grid grid-cols-1 gap-6">
-                <!-- Auth Section -->
-                <div class="glass-card rounded-2xl p-6 shadow-xl border border-gray-800" id="authSection">
-                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="ph ph-user-circle text-primary mr-2"></i> Cuenta en la Nube</h3>
-                    
-                    <div id="authLoggedOut" class="block">
-                        <p class="text-sm text-gray-400 mb-4">Inicia sesión para respaldar tus entrenamientos de forma segura.</p>
-                        <form id="authForm" class="space-y-4">
-                            <div>
-                                <input type="email" id="authEmail" placeholder="Correo electrónico" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
-                            </div>
-                            <div>
-                                <input type="password" id="authPassword" placeholder="Contraseña" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
-                            </div>
-                            <div class="flex gap-3">
-                                <button type="button" onclick="handleAuth('login')" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors text-sm">Iniciar Sesión</button>
-                                <button type="button" onclick="handleAuth('register')" class="flex-1 bg-darker hover:bg-gray-800 border border-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors text-sm">Registrarse</button>
-                            </div>
-                            <p id="authErrorMsg" class="text-red-400 text-xs hidden text-center mt-2"></p>
-                        </form>
-                    </div>
-
-                    <div id="authLoggedIn" class="hidden">
-                        <div class="flex items-center gap-4 mb-6 bg-darker p-4 rounded-xl border border-gray-700">
-                            <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center text-primary text-xl">
-                                <i class="ph ph-user"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold">Conectado como</p>
-                                <p id="authUserEmail" class="text-white font-semibold truncate"></p>
-                            </div>
-                        </div>
-                        <button type="button" onclick="handleLogout()" class="w-full flex items-center justify-center py-3 bg-darker hover:bg-gray-800 border border-gray-700 rounded-lg text-white font-semibold transition-colors">
-                            <i class="ph ph-sign-out mr-2 text-lg"></i> Cerrar Sesión
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Excel Data -->
                 <div class="glass-card rounded-2xl p-6 shadow-xl border border-gray-800">
                     <h3 class="text-xl font-bold mb-4 flex items-center"><i class="ph ph-file-xls text-accent mr-2"></i> Excel (Respaldo)</h3>
@@ -574,9 +542,6 @@
     <script>
         // --- ESTADO DE LA APLICACIÓN ---
         let volumeChartInstance = null;
-        let activeWorkout = { isRunning: false, startTime: null, exercises: [] };
-        let ghostDataCache = null;
-        let workoutTimerInterval = null;
         let chartInstance = null;
         window.routineData = { active: [], archived: [] };
 
@@ -1531,13 +1496,251 @@
             container.appendChild(dropDiv);
         }
 
+        // --- ASISTENTE GHOST ---
+        let ghostSetsData = null;
+        
+        function normalizeExerciseName(name) {
+            return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        }
+
+        document.getElementById('inputName').addEventListener('input', (e) => checkGhostData(e.target.value));
+
+        function checkGhostData(name) {
+            if (!name || name.trim() === '') {
+                document.getElementById('ghostHistoryCard').classList.add('hidden');
+                return;
+            }
+            
+            const searchName = normalizeExerciseName(name);
+            const sortedData = [...gymData].sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            let foundEx = null;
+            let foundDate = null;
+
+            for (const session of sortedData) {
+                const ex = session.exercises.find(e => normalizeExerciseName(e.name) === searchName);
+                if (ex) {
+                    foundEx = ex;
+                    foundDate = session.date;
+                    break;
+                }
+            }
+
+            if (foundEx) {
+                ghostSetsData = JSON.parse(JSON.stringify(foundEx.sets));
+                
+                const daysAgo = Math.floor((new Date() - new Date(foundDate)) / (1000 * 60 * 60 * 24));
+                const dateObj = new Date(foundDate);
+                dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+                const dateStr = dateObj.toLocaleDateString('es-ES');
+                
+                document.getElementById('ghostDateText').innerText = `Hace ${daysAgo} días (${dateStr})`;
+                
+                let setsStrs = foundEx.sets.map(s => `${s.reps}x${s.weight}${s.unit}${s.isDropSet?'(DS)':''}`);
+                document.getElementById('ghostSetsText').innerText = setsStrs.join(', ');
+                
+                let maxW = 0, maxR = 0;
+                foundEx.sets.forEach(s => {
+                    if (s.weight > maxW) { maxW = s.weight; maxR = s.reps; }
+                });
+                document.getElementById('ghostMaxText').innerText = `${maxW} kg x ${maxR}`;
+                
+                document.getElementById('ghostHistoryCard').classList.remove('hidden');
+            } else {
+                document.getElementById('ghostHistoryCard').classList.add('hidden');
+                ghostSetsData = null;
+            }
+        }
+
+        window.copyGhostSets = function() {
+            if (!ghostSetsData) return;
+            
+            const container = document.getElementById('setsContainer');
+            container.innerHTML = '';
+            
+            ghostSetsData.forEach((s) => {
+                if (!s.isDropSet) {
+                    addSetRow();
+                    const rows = container.querySelectorAll('.set-group');
+                    const lastRow = rows[rows.length - 1];
+                    lastRow.querySelector('.weight-input').value = s.weight;
+                    lastRow.querySelector('.unit-select').value = s.unit;
+                    const repsInput = lastRow.querySelector('.reps-input');
+                    repsInput.value = '';
+                    repsInput.placeholder = s.reps;
+                } else {
+                    const rows = container.querySelectorAll('.set-group');
+                    if(rows.length === 0) return;
+                    const lastRow = rows[rows.length - 1];
+                    const dsBtn = lastRow.querySelector('button[title="Añadir Drop Set"]');
+                    if(dsBtn) {
+                        addDropSet(dsBtn);
+                        const dsContainer = lastRow.querySelector('.drop-sets-container');
+                        const dsRows = dsContainer.querySelectorAll('.drop-set');
+                        const lastDsRow = dsRows[dsRows.length - 1];
+                        lastDsRow.querySelector('.weight-input').value = s.weight;
+                        lastDsRow.querySelector('.unit-select').value = s.unit;
+                        const repsInput = lastDsRow.querySelector('.reps-input');
+                        repsInput.value = '';
+                        repsInput.placeholder = s.reps;
+                    }
+                }
+            });
+            window.recalcSets();
+            showToast("Pesos copiados. ¡A superarlos!");
+        };
+
+        // --- FLUJO DE SESIÓN DE ENTRENAMIENTO ---
+        let activeWorkout = null;
+        let workoutTimerInterval = null;
+
+        function initWorkoutState() {
+            const saved = localStorage.getItem('hypertrack_active_workout');
+            if (saved) {
+                try {
+                    activeWorkout = JSON.parse(saved);
+                    startWorkoutTimerUI();
+                    renderActiveWorkoutList();
+                } catch(e) {
+                    activeWorkout = null;
+                }
+            }
+            updateWorkoutUI();
+        }
+
+        function updateWorkoutUI() {
+            const startPanel = document.getElementById('startWorkoutPanel');
+            const activePanel = document.getElementById('activeWorkoutPanel');
+            if (activeWorkout) {
+                if(startPanel) startPanel.classList.add('hidden');
+                if(activePanel) activePanel.classList.remove('hidden');
+            } else {
+                if(startPanel) startPanel.classList.remove('hidden');
+                if(activePanel) activePanel.classList.add('hidden');
+                if(workoutTimerInterval) clearInterval(workoutTimerInterval);
+            }
+        }
+
+        window.startWorkout = function() {
+            if (activeWorkout) return;
+            activeWorkout = {
+                startTime: Date.now(),
+                date: document.getElementById('inputDate').value,
+                exercises: []
+            };
+            localStorage.setItem('hypertrack_active_workout', JSON.stringify(activeWorkout));
+            startWorkoutTimerUI();
+            updateWorkoutUI();
+            showToast("💪 ¡Entrenamiento iniciado!");
+        };
+
+        function startWorkoutTimerUI() {
+            if(workoutTimerInterval) clearInterval(workoutTimerInterval);
+            
+            const display = document.getElementById('workoutTimerDisplay');
+            if(!display) return;
+            
+            const updateTimer = () => {
+                if(!activeWorkout) return;
+                const diff = Math.floor((Date.now() - activeWorkout.startTime) / 1000);
+                const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+                const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+                const s = String(diff % 60).padStart(2, '0');
+                display.innerText = h === "00" ? `${m}:${s}` : `${h}:${m}:${s}`;
+            };
+            
+            updateTimer();
+            workoutTimerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function renderActiveWorkoutList() {
+            const list = document.getElementById('activeWorkoutList');
+            if(!list) return;
+            
+            if(!activeWorkout || activeWorkout.exercises.length === 0) {
+                list.classList.add('hidden');
+                return;
+            }
+            list.classList.remove('hidden');
+            list.innerHTML = activeWorkout.exercises.map((ex, idx) => {
+                let setsStr = ex.sets.map(s => `${s.reps}x${s.weight}${s.unit}`).join(', ');
+                return `
+                    <div class="flex justify-between items-center bg-dark p-2 rounded-lg border border-gray-700">
+                        <div>
+                            <p class="text-sm font-bold text-gray-200">${ex.name} <span class="text-[10px] text-gray-500 bg-gray-800 px-1 py-0.5 rounded ml-1 uppercase">${ex.muscle}</span></p>
+                            <p class="text-xs text-gray-400 font-mono mt-0.5">${setsStr}</p>
+                        </div>
+                        <button type="button" onclick="removeActiveExercise(${idx})" class="text-gray-500 hover:text-red-400 p-2" title="Eliminar Ejercicio"><i class="ph ph-trash text-lg"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.removeActiveExercise = function(idx) {
+            if(!activeWorkout) return;
+            activeWorkout.exercises.splice(idx, 1);
+            localStorage.setItem('hypertrack_active_workout', JSON.stringify(activeWorkout));
+            renderActiveWorkoutList();
+        };
+
+        window.finishWorkout = function() {
+            if(!activeWorkout) return;
+            if(activeWorkout.exercises.length === 0) {
+                if(confirm("No has añadido ejercicios. ¿Cancelar entrenamiento?")) {
+                    activeWorkout = null;
+                    localStorage.removeItem('hypertrack_active_workout');
+                    updateWorkoutUI();
+                }
+                return;
+            }
+
+            const diff = Math.floor((Date.now() - activeWorkout.startTime) / 1000);
+            const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+            const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            const s = String(diff % 60).padStart(2, '0');
+            const durationStr = h === '00' ? `${m}:${s}` : `${h}:${m}:${s}`;
+
+            const date = activeWorkout.date;
+            
+            let sessionIndex = gymData.findIndex(s => s.date === date);
+            if (sessionIndex > -1) {
+                gymData[sessionIndex].exercises.push(...activeWorkout.exercises);
+                if(!gymData[sessionIndex].duration) gymData[sessionIndex].duration = durationStr;
+            } else {
+                gymData.push({
+                    date: date,
+                    duration: durationStr,
+                    exercises: activeWorkout.exercises
+                });
+            }
+
+            if(window.saveToDB) window.saveToDB();
+            
+            activeWorkout = null;
+            localStorage.removeItem('hypertrack_active_workout');
+            if(workoutTimerInterval) clearInterval(workoutTimerInterval);
+            
+            updateWorkoutUI();
+            
+            const list = document.getElementById('activeWorkoutList');
+            if(list) list.innerHTML = '';
+            
+            if(window.refreshUI) window.refreshUI();
+            switchTab('history');
+            showToast("✅ Entrenamiento Finalizado y Guardado");
+        };
+
         function handleAddSubmit(e) {
             e.preventDefault();
             
+            if (!activeWorkout) {
+                startWorkout();
+            }
+            
             const date = document.getElementById('inputDate').value;
             const muscle = document.getElementById('inputMuscle').value;
-            const name = document.getElementById('inputName').value;
-            const note = document.getElementById('inputNote') ? document.getElementById('inputNote').value : '';
+            const name = document.getElementById('inputName').value.trim();
+            const note = document.getElementById('inputNote') ? document.getElementById('inputNote').value.trim() : '';
             
             const sets = [];
             document.querySelectorAll('.set-group').forEach(group => {
@@ -1557,13 +1760,14 @@
                 });
             });
 
-            let session = gymData.find(s => s.date === date);
-            if (!session) {
-                session = { date: date, exercises: [] };
-                gymData.push(session);
-            }
+            const exData = { name, muscle, sets };
+            if(note) exData.note = note;
 
-            session.exercises.push({ name, muscle, sets, note });
+            activeWorkout.exercises.push(exData);
+            activeWorkout.date = date; // Force update to chosen date
+            localStorage.setItem('hypertrack_active_workout', JSON.stringify(activeWorkout));
+            
+            renderActiveWorkoutList();
 
             document.getElementById('inputName').value = '';
             if (document.getElementById('inputNote')) document.getElementById('inputNote').value = '';
@@ -1584,13 +1788,16 @@
                             </select>
                         </div>
                         <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
+                        <button type="button" onclick="this.closest('.set-group').remove(); window.recalcSets()" class="text-gray-600 hover:text-red-400 p-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
                     </div>
                     <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
                 </div>
             `;
             
-            if(window.saveToDB) window.saveToDB();
-            showToast("✅ Ejercicio guardado");
+            document.getElementById('ghostHistoryCard').classList.add('hidden');
+            ghostSetsData = null;
+            
+            showToast("Ejercicio añadido al entrenamiento actual");
         }
 
         function exportExcel() {
@@ -2009,233 +2216,11 @@
             showToast("🗑️ Todos los registros eliminados");
         }
 
-        
-        window.checkGhostAssistant = function() {
-            const name = document.getElementById('inputName').value.trim();
-            const card = document.getElementById('ghostHistoryCard');
-            if(!name || !window.gymData) {
-                card.classList.add('hidden');
-                return;
-            }
-
-            const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-            const searchName = norm(name);
-            
-            let lastEx = null;
-            let lastDate = null;
-            
-            for (const session of window.gymData) {
-                for (const ex of session.exercises) {
-                    if (norm(ex.name) === searchName) {
-                        lastEx = ex;
-                        lastDate = session.date;
-                        break;
-                    }
-                }
-                if (lastEx) break;
-            }
-            
-            if (lastEx) {
-                window.ghostDataCache = lastEx.sets;
-                
-                const dateObj = new Date(lastDate);
-                dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
-                const daysAgo = Math.floor((new Date() - dateObj) / (1000 * 60 * 60 * 24));
-                const dateStr = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                
-                document.getElementById('ghostDate').innerText = `Hace ${daysAgo} días (${dateStr})`;
-                
-                let maxWeight = 0;
-                let repsAtMax = 0;
-                let unitAtMax = 'kg';
-                let summaryArr = [];
-                
-                lastEx.sets.forEach(s => {
-                    const w = parseFloat(s.weight);
-                    if (w > maxWeight) {
-                        maxWeight = w;
-                        repsAtMax = s.reps;
-                        unitAtMax = s.unit;
-                    }
-                    summaryArr.push(`${s.reps}x @ ${s.weight}${s.unit}`);
-                });
-                
-                document.getElementById('ghostPR').innerText = maxWeight > 0 ? `${maxWeight}${unitAtMax} x ${repsAtMax}` : 'N/A';
-                document.getElementById('ghostSetsSummary').innerText = summaryArr.join(', ');
-                
-                card.classList.remove('hidden');
-            } else {
-                card.classList.add('hidden');
-            }
-        };
-
-        window.copyGhostSets = function() {
-            if(!window.ghostDataCache || window.ghostDataCache.length === 0) return;
-            
-            const container = document.getElementById('setsContainer');
-            container.innerHTML = '';
-            
-            window.ghostDataCache.forEach((s) => {
-                window.addSetRow(); // Use the existing window.addSetRow mapping or just call it
-                // addSetRow is declared globally, so we can call it directly
-            });
-            
-            const mainRows = container.querySelectorAll('.main-set');
-            window.ghostDataCache.forEach((s, idx) => {
-                if(mainRows[idx]) {
-                    mainRows[idx].querySelector('.weight-input').value = s.weight;
-                    mainRows[idx].querySelector('.unit-select').value = s.unit;
-                }
-            });
-            window.showToast("Pesos precargados");
-        };
-
-        window.startWorkout = function() {
-            window.activeWorkout = {
-                isRunning: true,
-                startTime: Date.now(),
-                exercises: []
-            };
-            window.saveActiveWorkout();
-            window.resumeWorkoutUI();
-            window.showToast("💪 ¡Entrenamiento iniciado!");
-        };
-
-        window.resumeWorkoutUI = function() {
-            const startBtn = document.querySelector('button[onclick="startWorkout()"]');
-            if(startBtn) startBtn.classList.add('hidden');
-            document.getElementById('btnFinishWorkout').classList.remove('hidden');
-            document.getElementById('btnCancelWorkout').classList.remove('hidden');
-            document.getElementById('workoutTimer').classList.remove('hidden');
-            document.getElementById('activeWorkoutContainer').classList.remove('hidden');
-            
-            if(window.workoutTimerInterval) clearInterval(window.workoutTimerInterval);
-            window.workoutTimerInterval = setInterval(window.updateWorkoutTimer, 1000);
-            window.updateWorkoutTimer();
-            window.renderActiveWorkout();
-        };
-
-        window.updateWorkoutTimer = function() {
-            if(!window.activeWorkout.isRunning) return;
-            const diff = Math.floor((Date.now() - window.activeWorkout.startTime) / 1000);
-            const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
-            const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-            const secs = String(diff % 60).padStart(2, '0');
-            document.getElementById('workoutTimerText').innerText = `${hrs}:${mins}:${secs}`;
-        };
-
-        window.saveActiveWorkout = function() {
-            localStorage.setItem('hypertrack_active_workout', JSON.stringify(window.activeWorkout));
-        };
-
-        window.cancelWorkout = function() {
-            if(!confirm("¿Cancelar entrenamiento? Se perderán los ejercicios registrados en esta sesión en curso.")) return;
-            window.activeWorkout = { isRunning: false, startTime: null, exercises: [] };
-            window.saveActiveWorkout();
-            window.resetWorkoutUI();
-            window.showToast("Entrenamiento cancelado");
-        };
-
-        window.resetWorkoutUI = function() {
-            if(window.workoutTimerInterval) clearInterval(window.workoutTimerInterval);
-            const startBtn = document.querySelector('button[onclick="startWorkout()"]');
-            if(startBtn) startBtn.classList.remove('hidden');
-            document.getElementById('btnFinishWorkout').classList.add('hidden');
-            document.getElementById('btnCancelWorkout').classList.add('hidden');
-            document.getElementById('workoutTimer').classList.add('hidden');
-            document.getElementById('activeWorkoutContainer').classList.add('hidden');
-            document.getElementById('workoutTimerText').innerText = '00:00:00';
-            document.getElementById('activeWorkoutList').innerHTML = '';
-        };
-
-        window.finishWorkout = function() {
-            if(window.activeWorkout.exercises.length === 0) {
-                alert("No has registrado ningún ejercicio en esta sesión.");
-                return;
-            }
-            
-            const diff = Math.floor((Date.now() - window.activeWorkout.startTime) / 1000);
-            const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
-            const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-            window.activeWorkout.exercises[0]._sessionDuration = `${hrs}:${mins}`;
-            
-            const dateVal = document.getElementById('inputDate').value;
-            
-            let existingIdx = window.gymData.findIndex(s => s.date === dateVal);
-            if(existingIdx > -1) {
-                window.gymData[existingIdx].exercises.push(...window.activeWorkout.exercises);
-                window.gymData[existingIdx].duration = `${hrs}:${mins}`;
-            } else {
-                window.gymData.push({
-                    date: dateVal,
-                    duration: `${hrs}:${mins}`,
-                    exercises: window.activeWorkout.exercises
-                });
-                window.gymData.sort((a, b) => new Date(b.date) - new Date(a.date));
-            }
-            
-            window.activeWorkout = { isRunning: false, startTime: null, exercises: [] };
-            window.saveActiveWorkout();
-            window.resetWorkoutUI();
-            
-            if(window.saveToDB) window.saveToDB();
-            if(window.refreshUI) window.refreshUI();
-            
-            window.showToast("🎉 ¡Entrenamiento finalizado y guardado!");
-        };
-
-        window.renderActiveWorkout = function() {
-            const list = document.getElementById('activeWorkoutList');
-            if(!list) return;
-            if(window.activeWorkout.exercises.length === 0) {
-                list.innerHTML = '<p class="text-gray-500 text-sm italic">Aún no hay ejercicios...</p>';
-                return;
-            }
-            
-            list.innerHTML = window.activeWorkout.exercises.map((ex, idx) => `
-                <div class="bg-darker p-3 rounded-xl border border-gray-700 flex justify-between items-center shadow-sm">
-                    <div>
-                        <p class="text-sm font-bold text-gray-200">${ex.name}</p>
-                        <p class="text-xs text-primary font-semibold mt-0.5">${ex.sets.length} series <span class="text-gray-500 font-normal">| ${ex.muscle}</span></p>
-                    </div>
-                    <button type="button" onclick="deleteActiveWorkoutExercise(${idx})" class="text-gray-600 hover:text-red-400 p-2 transition-colors rounded-lg hover:bg-red-900/20" title="Borrar"><i class="ph ph-trash text-lg"></i></button>
-                </div>
-            `).join('');
-        };
-
-        window.deleteActiveWorkoutExercise = function(idx) {
-            if(!confirm("¿Borrar este ejercicio de la sesión en curso?")) return;
-            window.activeWorkout.exercises.splice(idx, 1);
-            window.saveActiveWorkout();
-            window.renderActiveWorkout();
-        };
-
-// Init
+        // Init
         document.addEventListener('DOMContentLoaded', () => {
-            // Setup Ghost Assistant events
-            const inputNameEl = document.getElementById('inputName');
-            if(inputNameEl) {
-                let debounceTimer;
-                inputNameEl.addEventListener('input', () => {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(window.checkGhostAssistant, 500);
-                });
-                inputNameEl.addEventListener('change', window.checkGhostAssistant);
-            }
-            
-            // Restore active workout
-            const savedWorkout = localStorage.getItem('hypertrack_active_workout');
-            if (savedWorkout) {
-                try {
-                    window.activeWorkout = JSON.parse(savedWorkout);
-                    if (window.activeWorkout.isRunning) {
-                        window.resumeWorkoutUI();
-                    }
-                } catch(e) {}
-            }
-
             document.getElementById('inputDate').valueAsDate = new Date();
             populateExerciseSelect();
+            initWorkoutState();
             switchTab('dashboard');
             renderRoutine();
         });
@@ -2244,193 +2229,120 @@
     <!-- MÓDULO DE BASE DE DATOS (SUPABASE) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // 1. Pega aquí los valores obtenidos de Supabase
     const SUPABASE_URL = 'https://qremwdvbhqvzbxtecvpj.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyZW13ZHZiaHF2emJ4dGVjdnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NDAyMDQsImV4cCI6MjEwNDIxNjIwNH0.gdEx2Lg8pZYKUHahtLs9n87yso6Y8jym7X58oZ-_dbk';
 
-    // Estado local
+    // Cargar respaldo local de inmediato mientras conecta la nube
     const cached = localStorage.getItem('hypertrack_gymData');
     if (cached) {
-        try { window.gymData = JSON.parse(cached); } catch(e) {}
+        try { gymData = JSON.parse(cached); } catch(e) {}
     }
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    window.currentUser = null;
+    try {
+        if (SUPABASE_URL !== 'TU_URL_DE_SUPABASE_AQUI' && !SUPABASE_URL.includes('tu-id-de-proyecto')) {
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Actualizar UI de Auth
-    function updateAuthUI() {
-        const authLoggedOut = document.getElementById('authLoggedOut');
-        const authLoggedIn = document.getElementById('authLoggedIn');
-        const authUserEmail = document.getElementById('authUserEmail');
-        
-        if (authLoggedOut && authLoggedIn && authUserEmail) {
-            if(window.currentUser) {
-                authLoggedOut.classList.add('hidden');
-                authLoggedIn.classList.remove('hidden');
-                authUserEmail.innerText = window.currentUser.email;
-            } else {
-                authLoggedOut.classList.remove('hidden');
-                authLoggedIn.classList.add('hidden');
-            }
-        }
-    }
+            const initDB = async () => {
+                // 1. Obtener sesiones desde Supabase
+                const { data, error } = await supabase
+                    .from('gym_sessions')
+                    .select('date, exercises')
+                    .order('date', { ascending: false });
 
-    window.handleAuth = async (type) => {
-        const email = document.getElementById('authEmail').value;
-        const password = document.getElementById('authPassword').value;
-        const errorMsg = document.getElementById('authErrorMsg');
-        
-        if(!email || !password) {
-            errorMsg.innerText = 'Rellena todos los campos.';
-            errorMsg.classList.remove('hidden');
-            return;
-        }
-        
-        errorMsg.classList.add('hidden');
-        let error = null;
+                if (data && !error) {
+                    window.gymData = data.map(s => {
+                        if (s.exercises && s.exercises.length > 0 && s.exercises[0]._sessionDuration) {
+                            s.duration = s.exercises[0]._sessionDuration;
+                        }
+                        return s;
+                    });
+                    localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
+                    if (window.refreshUI) window.refreshUI();
+                    showToast("☁️ Sesiones sincronizadas");
+                }
 
-        if (type === 'login') {
-            const res = await supabase.auth.signInWithPassword({ email, password });
-            error = res.error;
-        } else {
-            const res = await supabase.auth.signUp({ email, password });
-            error = res.error;
-            if(!error) alert("Cuenta creada o ingresada exitosamente.");
-        }
+                // 2. Obtener rutina activa/archivada
+                const { data: rData } = await supabase
+                    .from('gym_routines')
+                    .select('data')
+                    .eq('id', 'my_routine')
+                    .single();
 
-        if (error) {
-            errorMsg.innerText = error.message;
-            errorMsg.classList.remove('hidden');
-        } else {
-            document.getElementById('authEmail').value = '';
-            document.getElementById('authPassword').value = '';
-            showToast("👋 ¡Bienvenido!");
-        }
-    };
+                if (rData && rData.data) {
+                    window.routineData = rData.data;
+                    if (window.renderRoutine) window.renderRoutine();
+                }
 
-    window.handleLogout = async () => {
-        await supabase.auth.signOut();
-        window.gymData = [];
-        window.routineData = { active: [], archived: [] };
-        localStorage.removeItem('hypertrack_gymData');
-        localStorage.removeItem('hypertrack_active_workout');
-        if (window.refreshUI) window.refreshUI();
-        if (window.renderRoutine) window.renderRoutine();
-        showToast("Sesión cerrada");
-    };
-
-    // Escuchar cambios de sesión
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        window.currentUser = session?.user || null;
-        updateAuthUI();
-
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-            if (window.currentUser) {
-                await syncDataFromCloud();
-            }
-        }
-    });
-
-    const syncDataFromCloud = async () => {
-        if (!window.currentUser) return;
-
-        // 1. Obtener sesiones
-        const { data, error } = await supabase
-            .from('gym_sessions')
-            .select('date, exercises')
-            .eq('user_id', window.currentUser.id)
-            .order('date', { ascending: false });
-
-        if (data && !error) {
-            // Merge con local data (si hay algo local que no estaba subido)
-            let hasLocalChanges = false;
-            
-            if (window.gymData.length > 0 && data.length === 0) {
-                // Subir local a cloud (primera sincronización)
-                await window.saveToDB();
-                hasLocalChanges = true;
-            } else {
-                window.gymData = data.map(s => {
-                    if (s.exercises && s.exercises.length > 0 && s.exercises[0]._sessionDuration) {
-                        s.duration = s.exercises[0]._sessionDuration;
+                // 3. Guardado atómico de sesión individual (Evita race conditions)
+                window.saveSingleSessionToDB = async (session) => {
+                    try {
+                        const exercisesCopy = JSON.parse(JSON.stringify(session.exercises));
+                        if (exercisesCopy.length > 0 && session.duration) {
+                            exercisesCopy[0]._sessionDuration = session.duration;
+                        }
+                        await supabase
+                            .from('gym_sessions')
+                            .upsert({ date: session.date, exercises: exercisesCopy }, { onConflict: 'date' });
+                    } catch(e) {
+                        console.error("Error al guardar sesión individual:", e);
                     }
-                    return s;
-                });
-            }
-            
-            localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
-            if (window.refreshUI) window.refreshUI();
-            if(!hasLocalChanges) showToast("☁️ Datos cargados");
-        }
+                };
 
-        // 2. Obtener rutinas
-        const { data: rData } = await supabase
-            .from('gym_routines')
-            .select('data')
-            .eq('user_id', window.currentUser.id)
-            .single();
+                // 4. Eliminación puntual por fecha
+                window.deleteSessionFromDB = async (date) => {
+                    try {
+                        const { error } = await supabase
+                            .from('gym_sessions')
+                            .delete()
+                            .eq('date', date);
+                        if (error) console.error("Error al borrar en Supabase:", error);
+                    } catch(e) {
+                        console.error("Error de conexión al borrar:", e);
+                    }
+                };
 
-        if (rData && rData.data) {
-            window.routineData = rData.data;
+                // 5. Guardado global (para importación de Excel o creación de sesiones)
+                window.saveToDB = async () => {
+                    try {
+                        localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
+
+                        const payload = window.gymData.map(s => {
+                            const copy = JSON.parse(JSON.stringify(s.exercises));
+                            if (copy.length > 0 && s.duration) copy[0]._sessionDuration = s.duration;
+                            return { date: s.date, exercises: copy };
+                        });
+
+                        if (payload.length > 0) {
+                            const { error } = await supabase
+                                .from('gym_sessions')
+                                .upsert(payload, { onConflict: 'date' });
+                            if (error) throw error;
+                        }
+                        showToast("☁️ Datos sincronizados");
+                    } catch(e) {
+                        console.error("Error sincronizando:", e);
+                        showToast("⚠️ Guardado localmente");
+                    }
+                };
+
+                // 6. Guardado de rutina
+                window.saveRoutineToDB = async () => {
+                    try {
+                        await supabase
+                            .from('gym_routines')
+                            .upsert({ id: 'my_routine', data: window.routineData }, { onConflict: 'id' });
+                    } catch(e) {
+                        console.error("Error guardando rutina:", e);
+                    }
+                };
+            };
+
+            initDB();
         } else {
-            if (window.routineData.active.length > 0 && window.saveRoutineToDB) {
-                await window.saveRoutineToDB();
-            }
+            console.log("Supabase inactivo: coloca tus credenciales para sincronizar en la nube.");
         }
-        if (window.renderRoutine) window.renderRoutine();
-    };
-
-    window.saveSingleSessionToDB = async (session) => {
-        if (!window.currentUser) return;
-        try {
-            const exercisesCopy = JSON.parse(JSON.stringify(session.exercises));
-            if (exercisesCopy.length > 0 && session.duration) {
-                exercisesCopy[0]._sessionDuration = session.duration;
-            }
-            await supabase
-                .from('gym_sessions')
-                .upsert(
-                    { user_id: window.currentUser.id, date: session.date, exercises: exercisesCopy }, 
-                    { onConflict: 'user_id,date' }
-                );
-        } catch(e) {}
-    };
-
-    window.deleteSessionFromDB = async (date) => {
-        if (!window.currentUser) return;
-        try {
-            await supabase.from('gym_sessions').delete().eq('user_id', window.currentUser.id).eq('date', date);
-        } catch(e) {}
-    };
-
-    window.saveToDB = async () => {
-        localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
-        if (!window.currentUser) return;
-
-        try {
-            const payload = window.gymData.map(s => {
-                const copy = JSON.parse(JSON.stringify(s.exercises));
-                if (copy.length > 0 && s.duration) copy[0]._sessionDuration = s.duration;
-                return { user_id: window.currentUser.id, date: s.date, exercises: copy };
-            });
-
-            if (payload.length > 0) {
-                await supabase.from('gym_sessions').upsert(payload, { onConflict: 'user_id,date' });
-            } else {
-                await supabase.from('gym_sessions').delete().eq('user_id', window.currentUser.id).neq('date', 'NO_BORRAR');
-            }
-            showToast("☁️ Datos sincronizados");
-        } catch(e) {}
-    };
-
-    window.saveRoutineToDB = async () => {
-        if (!window.currentUser) return;
-        try {
-            await supabase
-                .from('gym_routines')
-                .upsert(
-                    { user_id: window.currentUser.id, data: window.routineData }, 
-                    { onConflict: 'user_id' }
-                );
-        } catch(e) {}
-    };
+    } catch (e) {
+        console.error("Error inicializando Supabase:", e);
+    }
 </script>
