@@ -1158,12 +1158,14 @@
                     ex.sets.forEach((set, i) => {
                         rows.push({
                             'Fecha': session.date,
+                            'Tiempo': session.duration || '',
                             'Grupo Muscular': ex.muscle,
                             'Ejercicio': ex.name,
                             'Serie': i + 1,
                             'Repeticiones': set.reps,
                             'Peso': set.weight,
-                            'Unidad': (set.unit || 'kg').toLowerCase()
+                            'Unidad': (set.unit || 'kg').toLowerCase(),
+                            'Notas': ex.note || ''
                         });
                     });
                 });
@@ -1227,6 +1229,8 @@
                         if(!importedData[dateStr][exName]) {
                             importedData[dateStr][exName] = {
                                 muscle: row['Grupo Muscular'] || 'Otro',
+                                note: row['Notas'] || '',
+                                duration: row['Tiempo'] || row['Tiempo (Duración)'] || '',
                                 sets: []
                             };
                         }
@@ -1246,15 +1250,27 @@
                             session = { date: date, exercises: [] };
                             gymData.push(session);
                         }
+                        
+                        // Set session duration if it was provided
+                        let foundDuration = '';
+                        for (const exData of Object.values(exercises)) {
+                            if (exData.duration) foundDuration = exData.duration;
+                        }
+                        if (foundDuration && !session.duration) {
+                            session.duration = foundDuration;
+                        }
+
                         for (const [name, exData] of Object.entries(exercises)) {
                             // Buscar si ya existe el ejercicio ese día para no duplicar series, o agregar como nuevo
                             let existingEx = session.exercises.find(e => e.name === name);
                             if(existingEx) {
                                 existingEx.sets.push(...exData.sets);
+                                if (!existingEx.note && exData.note) existingEx.note = exData.note;
                             } else {
                                 session.exercises.push({
                                     name: name,
                                     muscle: exData.muscle,
+                                    note: exData.note,
                                     sets: exData.sets
                                 });
                             }
@@ -1273,7 +1289,7 @@
 
                 } catch(error) {
                     console.error(error);
-                    showModal("Error al importar", "Hubo un problema al leer el Excel. Asegúrate de que las columnas se llamen: Fecha, Grupo Muscular, Ejercicio, Serie, Repeticiones, Peso, Unidad.");
+                    showModal("Error al importar", "Hubo un problema al leer el Excel. Asegúrate de que las columnas se llamen: Fecha, Tiempo, Grupo Muscular, Ejercicio, Serie, Repeticiones, Peso, Unidad, Notas.");
                 }
             };
             reader.readAsArrayBuffer(file);
