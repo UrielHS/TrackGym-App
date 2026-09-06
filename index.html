@@ -212,6 +212,22 @@
             </div>
         </div>
 
+        <div id="muscleSuggestionModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
+            <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl w-full max-w-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-white flex items-center"><i class="ph ph-lightning text-accent mr-2"></i> Sugerencias de Rutina</h3>
+                    <button onclick="closeMuscleSuggestionModal()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <p class="text-sm text-gray-400 mb-4">Tienes estos ejercicios guardados en tu rutina. Toca uno para agregarlo:</p>
+                <div id="muscleSuggestionList" class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+                    <!-- Botones dinámicos -->
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-800 text-center">
+                    <button onclick="closeMuscleSuggestionModal()" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors">Omitir y escribir manualmente</button>
+                </div>
+            </div>
+        </div>
+
         <!-- DASHBOARD TAB -->
         <section id="dashboard" class="tab-content active max-w-6xl mx-auto">
             <header class="mb-8">
@@ -376,7 +392,8 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-400 mb-1">Grupo Muscular</label>
-                            <select id="inputMuscle" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
+                            <select id="inputMuscle" onchange="handleMuscleChange()" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
+                                <option value="" disabled selected>Selecciona músculo...</option>
                                 <option value="Pecho">Pecho</option>
                                 <option value="Espalda">Espalda</option>
                                 <option value="Pierna">Pierna</option>
@@ -1865,6 +1882,29 @@
             setTimeout(() => {
                 inputName.classList.remove('bg-blue-900/30', 'border-primary');
             }, 500);
+        }
+
+        function handleMuscleChange() {
+            const selectedMuscle = document.getElementById('inputMuscle').value;
+            if(!window.routineData || !window.routineData.active) return;
+
+            const routineExercises = window.routineData.active.filter(ex => ex.muscle === selectedMuscle);
+            const uniqueNames = [...new Set(routineExercises.map(ex => ex.name))];
+
+            if (uniqueNames.length > 0) {
+                const list = document.getElementById('muscleSuggestionList');
+                list.innerHTML = uniqueNames.map(name => `
+                    <button type="button" onclick="loadSuggestion('${name}', '${selectedMuscle}'); closeMuscleSuggestionModal()" class="w-full text-left bg-darker hover:bg-gray-800 text-gray-200 text-sm font-semibold px-4 py-3 rounded-xl transition-colors border border-gray-700 flex items-center justify-between group">
+                        <span>${name}</span>
+                        <i class="ph ph-plus-circle text-primary opacity-0 group-hover:opacity-100 transition-opacity text-lg"></i>
+                    </button>
+                `).join('');
+                document.getElementById('muscleSuggestionModal').classList.remove('hidden');
+            }
+        }
+
+        function closeMuscleSuggestionModal() {
+            document.getElementById('muscleSuggestionModal').classList.add('hidden');
         }
 
         // Eliminar todos los registros
