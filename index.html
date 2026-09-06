@@ -313,6 +313,11 @@
                         <input type="text" id="inputName" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
                     </div>
 
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Notas (Opcional)</label>
+                        <textarea id="inputNote" rows="2" placeholder="Ej. Me costó la última serie..." class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors resize-none"></textarea>
+                    </div>
+
                     <div class="bg-darker p-4 rounded-xl border border-gray-800 mb-6">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="font-semibold text-sm">Series (Sets)</h4>
@@ -789,6 +794,7 @@
                 
                 let exercisesHTML = session.exercises.map((ex, index) => {
                     let setsStr = ex.sets.map(s => `${s.reps}x${formatDisplayWeight(s.weight, s.unit)}`).join(' | ');
+                    let noteHtml = ex.note ? `<div class="mt-2 text-xs text-gray-400 bg-gray-800/50 p-2 rounded-lg border border-gray-700/50 flex items-start"><i class="ph ph-note-pencil mr-1.5 mt-0.5 text-primary"></i><span>${ex.note}</span></div>` : '';
                     return `
                         <div class="py-3 border-b border-gray-800 last:border-0 group relative">
                             <div class="flex justify-between items-start">
@@ -803,6 +809,7 @@
                                 </div>
                             </div>
                             <div class="text-sm text-gray-400 mt-1 ml-6 font-mono">${setsStr}</div>
+                            ${noteHtml ? `<div class="ml-6">${noteHtml}</div>` : ''}
                         </div>
                     `;
                 }).join('');
@@ -872,9 +879,13 @@
                     <p class="text-gray-400 text-xs uppercase tracking-wider">${date} • ${ex.muscle}</p>
                 </div>
                 <div id="editSetsContainer">${setsHtml}</div>
-                <button type="button" onclick="addEditSetRow()" class="text-primary text-sm font-medium hover:text-blue-400 mt-2 flex items-center">
+                <button type="button" onclick="addEditSetRow()" class="text-primary text-sm font-medium hover:text-blue-400 mt-2 flex items-center mb-4">
                     <i class="ph ph-plus-bold mr-1"></i> Añadir Serie
                 </button>
+                <div class="mt-4 pt-4 border-t border-gray-800">
+                    <label class="block text-xs text-gray-400 mb-2">Notas (Opcional)</label>
+                    <textarea id="editNote" rows="2" placeholder="Alguna observación sobre este ejercicio..." class="w-full bg-dark border border-gray-700 rounded-lg p-3 text-white text-sm outline-none focus:border-primary resize-none">${ex.note || ''}</textarea>
+                </div>
             `;
             document.getElementById('editExerciseModal').classList.remove('hidden');
         }
@@ -921,8 +932,11 @@
                 }
             });
             
+            const noteInput = document.getElementById('editNote');
+            
             if(newSets.length > 0) {
                 ex.sets = newSets;
+                if(noteInput) ex.note = noteInput.value;
                 if(window.saveToDB) window.saveToDB();
                 if(window.refreshUI) window.refreshUI();
                 closeEditModal();
@@ -992,6 +1006,7 @@
             const date = document.getElementById('inputDate').value;
             const muscle = document.getElementById('inputMuscle').value;
             const name = document.getElementById('inputName').value;
+            const note = document.getElementById('inputNote') ? document.getElementById('inputNote').value : '';
             
             const sets = [];
             document.querySelectorAll('.set-row').forEach(row => {
@@ -1007,9 +1022,10 @@
                 gymData.push(session);
             }
 
-            session.exercises.push({ name, muscle, sets });
+            session.exercises.push({ name, muscle, sets, note });
 
             document.getElementById('inputName').value = '';
+            if (document.getElementById('inputNote')) document.getElementById('inputNote').value = '';
             document.getElementById('setsContainer').innerHTML = `
                 <div class="flex items-center gap-2 md:gap-3 set-row">
                     <span class="text-gray-500 font-bold w-6">#1</span>
