@@ -1131,8 +1131,10 @@
             const list = document.getElementById('historyList');
             list.innerHTML = '';
             
-            const searchQuery = (document.getElementById('historySearch')?.value || '').toLowerCase().trim();
-            const muscleFilter = document.getElementById('historyFilterMuscle')?.value || '';
+            const normalize = str => str ? str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
+            
+            const searchQuery = normalize(document.getElementById('historySearch')?.value || '');
+            const muscleFilter = normalize(document.getElementById('historyFilterMuscle')?.value || '');
             let filteredSessionsCount = 0;
 
             const sortedData = [...gymData].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1145,8 +1147,11 @@
                 const formattedDate = dateObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
                 
                 let exercisesHTML = session.exercises.map((ex, index) => {
-                    if (muscleFilter && ex.muscle !== muscleFilter) return '';
-                    if (searchQuery && !(ex.name.toLowerCase().includes(searchQuery) || ex.muscle.toLowerCase().includes(searchQuery))) return '';
+                    const exNameNorm = normalize(ex.name);
+                    const exMuscleNorm = normalize(ex.muscle);
+
+                    if (muscleFilter && !exMuscleNorm.includes(muscleFilter)) return '';
+                    if (searchQuery && !(exNameNorm.includes(searchQuery) || exMuscleNorm.includes(searchQuery))) return '';
                     hasVisibleExercises = true;
 
                     let setsStr = '';
