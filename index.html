@@ -957,8 +957,8 @@
             let maxWeightPoints = [];
             let avgWeightPoints = [];
 
-            // Filtrar y ordenar por fecha ascendente
-            gymData.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(session => {
+            // Filtrar y ordenar por fecha ascendente (usando copia para no mutar el global)
+            [...gymData].sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(session => {
                 const ex = session.exercises.find(e => e.name.toLowerCase() === selectedExercise.toLowerCase());
                 if (ex) {
                     // Calcular peso máximo y promedio de la sesión (solo series no Drop Set)
