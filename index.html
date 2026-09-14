@@ -2378,16 +2378,48 @@
                     .select('date, exercises')
                     .order('date', { ascending: false });
 
+                let needsDbSync = false;
+
                 if (data && !error) {
                     window.gymData = data.map(s => {
                         if (s.exercises && s.exercises.length > 0 && s.exercises[0]._sessionDuration) {
                             s.duration = s.exercises[0]._sessionDuration;
                         }
+                        
+                        // Unificar nombres de ejercicios
+                        if (s.exercises) {
+                            s.exercises.forEach(ex => {
+                                const norm = ex.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                if (norm === 'curl de biceps con barra recta' || norm === 'curl de bicep con barra recta') {
+                                    if (ex.name !== 'Curl de bicep con barra recta') {
+                                        ex.name = 'Curl de bicep con barra recta';
+                                        ex.muscle = 'Bicep';
+                                        needsDbSync = true;
+                                    }
+                                } else if (norm === 'copa en maquina' || norm === 'copa en maquina triceps') {
+                                    if (ex.name !== 'Copa en maquina triceps') {
+                                        ex.name = 'Copa en maquina triceps';
+                                        ex.muscle = 'Tricep';
+                                        needsDbSync = true;
+                                    }
+                                }
+                            });
+                        }
+                        
                         return s;
                     });
+                    
                     localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
                     if (window.refreshUI) window.refreshUI();
+                    
+                    if (window.populateExerciseSelect) window.populateExerciseSelect();
+                    if (window.updateChart) window.updateChart();
+                    
                     showToast("☁️ Sesiones sincronizadas");
+                    
+                    if (needsDbSync) {
+                        setTimeout(() => { if (window.saveToDB) window.saveToDB(); }, 2000);
+                    }
                 }
 
                 // 2. Obtener rutina activa/archivada
@@ -2399,7 +2431,32 @@
 
                 if (rData && rData.data) {
                     window.routineData = rData.data;
+                    
+                    let needsRoutineSync = false;
+                    if (window.routineData.active) {
+                        window.routineData.active.forEach(ex => {
+                            const norm = ex.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            if (norm === 'curl de biceps con barra recta' || norm === 'curl de bicep con barra recta') {
+                                if (ex.name !== 'Curl de bicep con barra recta') {
+                                    ex.name = 'Curl de bicep con barra recta';
+                                    ex.muscle = 'Bicep';
+                                    needsRoutineSync = true;
+                                }
+                            } else if (norm === 'copa en maquina' || norm === 'copa en maquina triceps') {
+                                if (ex.name !== 'Copa en maquina triceps') {
+                                    ex.name = 'Copa en maquina triceps';
+                                    ex.muscle = 'Tricep';
+                                    needsRoutineSync = true;
+                                }
+                            }
+                        });
+                    }
+                    
                     if (window.renderRoutine) window.renderRoutine();
+                    
+                    if (needsRoutineSync) {
+                        setTimeout(() => { if (window.saveRoutineToDB) window.saveRoutineToDB(); }, 2500);
+                    }
                 }
 
                 // 3. Guardado atómico de sesión individual (Evita race conditions)
