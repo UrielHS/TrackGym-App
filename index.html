@@ -306,6 +306,23 @@
                 </div>
             </header>
 
+            <div class="mb-6 flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <input type="text" id="historySearch" placeholder="Buscar por ejercicio o músculo..." class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" oninput="renderHistory()">
+                </div>
+                <div class="w-full md:w-48">
+                    <select id="historyFilterMuscle" class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" onchange="renderHistory()">
+                        <option value="">Todos los músculos</option>
+                        <option value="Pecho">Pecho</option>
+                        <option value="Espalda">Espalda</option>
+                        <option value="Pierna">Pierna</option>
+                        <option value="Hombro">Hombro</option>
+                        <option value="Bicep">Bicep</option>
+                        <option value="Tricep">Tricep</option>
+                    </select>
+                </div>
+            </div>
+
             <div id="historyList" class="space-y-4">
                 <!-- Historial generado por JS -->
             </div>
@@ -451,7 +468,8 @@
                     
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-400 mb-1">Nombre del Ejercicio</label>
-                        <input type="text" id="inputName" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
+                        <input type="text" id="inputName" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" list="exerciseSuggestions" autocomplete="off">
+                        <datalist id="exerciseSuggestions"></datalist>
                     </div>
 
                     <div class="mb-6">
@@ -882,8 +900,11 @@
         // --- MANEJO DE DATOS Y CONVERSIONES ---
         function populateExerciseSelect() {
             const select = document.getElementById('chartExerciseSelect');
-            const currentVal = select.value;
-            select.innerHTML = '';
+            const datalist = document.getElementById('exerciseSuggestions');
+            
+            const currentVal = select ? select.value : null;
+            if (select) select.innerHTML = '';
+            if (datalist) datalist.innerHTML = '';
             
             const uniqueExercises = new Set();
             gymData.forEach(session => {
@@ -892,16 +913,25 @@
             
             const sortedExercises = Array.from(uniqueExercises).sort();
             sortedExercises.forEach(ex => {
-                const opt = document.createElement('option');
-                opt.value = ex;
-                opt.innerText = ex;
-                select.appendChild(opt);
+                if (select) {
+                    const opt = document.createElement('option');
+                    opt.value = ex;
+                    opt.innerText = ex;
+                    select.appendChild(opt);
+                }
+                if (datalist) {
+                    const dOpt = document.createElement('option');
+                    dOpt.value = ex;
+                    datalist.appendChild(dOpt);
+                }
             });
             
-            if (sortedExercises.includes(currentVal)) {
-                select.value = currentVal;
-            } else if (sortedExercises.length > 0) {
-                select.value = sortedExercises[0];
+            if (select) {
+                if (sortedExercises.includes(currentVal)) {
+                    select.value = currentVal;
+                } else if (sortedExercises.length > 0) {
+                    select.value = sortedExercises[0];
+                }
             }
         }
 
@@ -1100,16 +1130,25 @@
         function renderHistory() {
             const list = document.getElementById('historyList');
             list.innerHTML = '';
-            document.getElementById('totalWorkouts').innerText = gymData.length;
+            
+            const searchQuery = (document.getElementById('historySearch')?.value || '').toLowerCase().trim();
+            const muscleFilter = document.getElementById('historyFilterMuscle')?.value || '';
+            let filteredSessionsCount = 0;
 
             const sortedData = [...gymData].sort((a, b) => new Date(b.date) - new Date(a.date));
 
             sortedData.forEach(session => {
+                let hasVisibleExercises = false;
+
                 const dateObj = new Date(session.date);
                 dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
                 const formattedDate = dateObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
                 
                 let exercisesHTML = session.exercises.map((ex, index) => {
+                    if (muscleFilter && ex.muscle !== muscleFilter) return '';
+                    if (searchQuery && !(ex.name.toLowerCase().includes(searchQuery) || ex.muscle.toLowerCase().includes(searchQuery))) return '';
+                    hasVisibleExercises = true;
+
                     let setsStr = '';
                     ex.sets.forEach(s => {
                         if(s.isDropSet) {
@@ -1137,6 +1176,9 @@
                         </div>
                     `;
                 }).join('');
+
+                if (!hasVisibleExercises) return;
+                filteredSessionsCount++;
 
                 const displayTime = session.duration ? (String(session.duration).includes(':') ? session.duration : session.duration + ' min') : 'Añadir tiempo';
                 const durationBadge = `<button onclick="editDuration('${session.date}')" class="text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors flex items-center border border-gray-700 shadow-sm"><i class="ph ph-timer mr-1.5 text-primary"></i> ${displayTime}</button>`;
@@ -1168,6 +1210,8 @@
                 `;
                 list.appendChild(card);
             });
+            
+            document.getElementById('totalWorkouts').innerText = (searchQuery || muscleFilter) ? `${filteredSessionsCount} / ${gymData.length}` : gymData.length;
         }
 
         // --- LÓGICA DE GESTIÓN DE SESIÓN Y EDICIÓN ---
