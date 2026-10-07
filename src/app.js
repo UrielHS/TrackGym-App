@@ -5,7 +5,7 @@
 import { AuthService } from './services/auth.service.js';
 import { WorkoutsService } from './services/workouts.service.js';
 import { UI } from './modules/ui.js';
-import { sanitizeText, sanitizeDuration, normalizeExerciseName } from './utils/sanitize.js';
+import { sanitizeText, sanitizeDuration, normalizeExerciseName, escapeHTML } from './utils/sanitize.js';
 
 // --- ESTADO GLOBAL AISLADO DE LA APLICACIÓN ---
 const state = {
@@ -16,12 +16,24 @@ const state = {
     activeWorkout: null,
     activeTab: 'dashboard',
     ghostSetsData: null,
+    ghostMatchedExerciseName: null,
+    ghostMatchedMuscle: null,
     workoutTimerInterval: null,
     restTimerInterval: null,
     restTimeRemaining: 0,
     editingSessionDate: null,
     editingExerciseIndex: null
 };
+
+// Cargar caché local inmediato para reactividad instantánea y offline
+try {
+    const cachedData = localStorage.getItem('hypertrack_gymData');
+    if (cachedData) {
+        state.gymData = JSON.parse(cachedData);
+    }
+} catch (e) {
+    console.warn("No se pudo cargar la caché local de gymData", e);
+}
 
 // ==============================================================================
 // 1. GESTIÓN DE SESIÓN Y AUTENTICACIÓN
@@ -72,6 +84,9 @@ function handleUserLoggedOut() {
     state.gymData = [];
     state.routineData = { active: [], archived: [] };
     state.activeWorkout = null;
+    state.ghostSetsData = null;
+    state.ghostMatchedExerciseName = null;
+    state.ghostMatchedMuscle = null;
 
     // Purgar almacenamiento local para garantizar aislamiento total
     localStorage.removeItem('hypertrack_gymData');
@@ -82,6 +97,7 @@ function handleUserLoggedOut() {
     if (state.restTimerInterval) clearInterval(state.restTimerInterval);
 
     UI.renderAuthNavbar(null, null);
+    populateExerciseDatalist();
     refreshActiveView();
 }
 
@@ -100,6 +116,7 @@ async function loadUserData() {
         // Guardar respaldo local aislado para el usuario
         localStorage.setItem('hypertrack_gymData', JSON.stringify(state.gymData));
 
+        populateExerciseDatalist();
         refreshActiveView();
         UI.showToast("☁️ Datos sincronizados con tu cuenta", "success");
     } catch (error) {
@@ -292,7 +309,10 @@ function refreshActiveView() {
     } else if (state.activeTab === 'routine') {
         UI.renderRoutine(state.routineData);
     } else if (state.activeTab === 'add') {
+        populateExerciseDatalist();
         updateSuggestionsChips();
+        const curName = document.getElementById('inputName')?.value;
+        if (curName) checkGhostData(curName);
     }
 }
 
@@ -556,52 +576,299 @@ function recalcSets() {
     }
 }
 
+function populateExerciseDatalist() {
+    const datalist = document.getElementById('exerciseSuggestions');
+    if (!datalist) return;
+
+    const seen = new Set();
+    const suggestions = [];
+
+    // 1. Ejercicios de la rutina activa
+    if (state.routineData) {
+        const routineItems = Array.isArray(state.routineData.active)
+            ? state.routineData.active
+            : (state.routineData.active && typeof state.routineData.active === 'object'
+                ? Object.values(state.routineData.active).flat()
+                : []);
+
+        routineItems.forEach(ex => {
+            if (!ex || !ex.name) return;
+            const cleanName = ex.name.trim();
+            const norm = normalizeExerciseName(cleanName);
+            if (norm && !seen.has(norm)) {
+                seen.add(norm);
+                suggestions.push({ name: cleanName, muscle: ex.muscle || '' });
+            }
+        });
+    }
+
+    // 2. Ejercicios de sesiones históricas (cronológicamente más recientes primero)
+    if (Array.isArray(state.gymData)) {
+        const sortedSessions = [...state.gymData].sort((a, b) => new Date(b.date) - new Date(a.date));
+        sortedSessions.forEach(session => {
+            (session.exercises || []).forEach(ex => {
+                if (!ex || !ex.name) return;
+                const cleanName = ex.name.trim();
+                const norm = normalizeExerciseName(cleanName);
+                if (norm && !seen.has(norm)) {
+                    seen.add(norm);
+                    suggestions.push({ name: cleanName, muscle: ex.muscle || '' });
+                }
+            });
+        });
+    }
+
+    datalist.innerHTML = suggestions
+        .map(item => `<option value="${escapeHTML(item.name)}">${escapeHTML(item.muscle ? item.muscle : '')}</option>`)
+        .join('');
+}
+
 function checkGhostData(name) {
-    if (!name || name.trim() === '') {
-        document.getElementById('ghostHistoryCard')?.classList.add('hidden');
+    const card = document.getElementById('ghostHistoryCard');
+    if (!card) return;
+
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+        card.classList.add('hidden');
+        state.ghostSetsData = null;
+        state.ghostMatchedExerciseName = null;
+        state.ghostMatchedMuscle = null;
         return;
     }
 
-    const searchName = normalizeExerciseName(name);
-    const sorted = [...state.gymData].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const queryRaw = name.trim();
+    const queryNorm = normalizeExerciseName(queryRaw);
+    if (!queryNorm || queryNorm.length < 2) {
+        card.classList.add('hidden');
+        state.ghostSetsData = null;
+        return;
+    }
 
-    let foundEx = null;
-    let foundDate = null;
+    // Palabras vacías en español para tokenización
+    const stopWords = new Set(['de', 'del', 'al', 'a', 'en', 'con', 'el', 'la', 'los', 'las', 'un', 'una', 'por', 'para', 'y', 'o']);
+    const queryTokens = queryNorm
+        .split(/[\s,./\-_+()]+/)
+        .filter(t => t.length > 0 && !stopWords.has(t));
 
-    for (const session of sorted) {
-        const ex = (session.exercises || []).find(e => normalizeExerciseName(e.name) === searchName);
-        if (ex) {
-            foundEx = ex;
-            foundDate = session.date;
-            break;
+    const selectedMuscle = document.getElementById('inputMuscle')?.value || '';
+    const selectedMuscleNorm = normalizeExerciseName(selectedMuscle);
+
+    // Asegurar sesiones ordenadas por fecha descendente
+    const sorted = [...(state.gymData || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    let bestMatch = null;
+    let highestScore = 0;
+
+    for (let sIdx = 0; sIdx < sorted.length; sIdx++) {
+        const session = sorted[sIdx];
+        const exercises = session.exercises || [];
+
+        for (const ex of exercises) {
+            if (!ex.name || !Array.isArray(ex.sets) || ex.sets.length === 0) continue;
+
+            const candNorm = normalizeExerciseName(ex.name);
+            if (!candNorm) continue;
+
+            const candMuscleNorm = ex.muscle ? normalizeExerciseName(ex.muscle) : '';
+            const candTokens = candNorm
+                .split(/[\s,./\-_+()]+/)
+                .filter(t => t.length > 0 && !stopWords.has(t));
+
+            let score = 0;
+
+            // 1. Coincidencia exacta
+            if (candNorm === queryNorm) {
+                score = 100;
+            }
+            // 2. Prefijo directo (ej: "press in" -> "press inclinado")
+            else if (candNorm.startsWith(queryNorm)) {
+                score = 85 + Math.min(10, Math.floor((queryNorm.length / candNorm.length) * 10));
+            }
+            // 3. El usuario escribió más palabras que el ejercicio registrado
+            else if (queryNorm.startsWith(candNorm)) {
+                score = 80;
+            }
+            // 4. Subcadena completa
+            else if (candNorm.includes(queryNorm)) {
+                score = 75;
+            }
+            // 5. Query contiene la subcadena candidata
+            else if (queryNorm.includes(candNorm)) {
+                score = 70;
+            }
+            // 6. Token matching inteligente de palabras clave
+            else if (queryTokens.length > 0 && candTokens.length > 0) {
+                let matchedTokens = 0;
+                let exactTokens = 0;
+
+                for (const qTok of queryTokens) {
+                    if (candTokens.includes(qTok)) {
+                        exactTokens++;
+                        matchedTokens += 1;
+                    } else if (candTokens.some(cTok => cTok.startsWith(qTok) || qTok.startsWith(cTok))) {
+                        matchedTokens += 0.75;
+                    }
+                }
+
+                const ratio = matchedTokens / queryTokens.length;
+                if (ratio >= 0.99) {
+                    score = 65 + (exactTokens * 5);
+                } else if (ratio >= 0.5) {
+                    score = 40 * ratio;
+                }
+            }
+
+            if (score <= 0) continue;
+
+            // Bonificación o penalización según el grupo muscular seleccionado en el formulario
+            if (selectedMuscleNorm && candMuscleNorm) {
+                if (selectedMuscleNorm === candMuscleNorm) {
+                    score += 15;
+                } else if (score < 90) {
+                    score -= 15;
+                }
+            }
+
+            // Bonificación por recencia (hasta +5 puntos para las 10 sesiones más recientes)
+            const recencyBonus = Math.max(0, 10 - sIdx) * 0.5;
+            const totalScore = score + recencyBonus;
+
+            if (score === 100) {
+                bestMatch = { ex, date: session.date, score: totalScore, isExact: true };
+                highestScore = totalScore;
+                break;
+            }
+
+            if (totalScore > highestScore) {
+                highestScore = totalScore;
+                bestMatch = { ex, date: session.date, score: totalScore, isExact: candNorm === queryNorm };
+            }
+        }
+
+        if (bestMatch && bestMatch.isExact) break;
+    }
+
+    if (!bestMatch || highestScore < 45) {
+        card.classList.add('hidden');
+        state.ghostSetsData = null;
+        state.ghostMatchedExerciseName = null;
+        state.ghostMatchedMuscle = null;
+        return;
+    }
+
+    const { ex: foundEx, date: foundDate, isExact } = bestMatch;
+
+    state.ghostSetsData = JSON.parse(JSON.stringify(foundEx.sets));
+    state.ghostMatchedExerciseName = foundEx.name;
+    state.ghostMatchedMuscle = foundEx.muscle || '';
+
+    // Autoseleccionar grupo muscular si el usuario aún no lo ha elegido
+    const inputMuscle = document.getElementById('inputMuscle');
+    if (inputMuscle && (!inputMuscle.value || inputMuscle.value === '') && foundEx.muscle) {
+        const options = Array.from(inputMuscle.options);
+        const matchOpt = options.find(o => normalizeExerciseName(o.value) === normalizeExerciseName(foundEx.muscle));
+        if (matchOpt) inputMuscle.value = matchOpt.value;
+    }
+
+    // Calcular días transcurridos
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sessionDate = new Date(foundDate + 'T00:00:00');
+    const diffTime = today.getTime() - sessionDate.getTime();
+    const daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    let dateBadge = '';
+    if (daysAgo === 0) dateBadge = 'Hoy';
+    else if (daysAgo === 1) dateBadge = 'Ayer';
+    else if (daysAgo > 1) dateBadge = `Hace ${daysAgo} días`;
+    else dateBadge = 'Próxima';
+
+    const dateStr = sessionDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const dateTextEl = document.getElementById('ghostDateText');
+    if (dateTextEl) {
+        dateTextEl.innerText = `${dateBadge} (${dateStr})`;
+    }
+
+    // Nombre del ejercicio y badge
+    const nameEl = document.getElementById('ghostExerciseName');
+    if (nameEl) {
+        nameEl.innerText = `${foundEx.name}${foundEx.muscle ? ' (' + foundEx.muscle + ')' : ''}`;
+    }
+
+    const matchBadgeEl = document.getElementById('ghostMatchBadge');
+    if (matchBadgeEl) {
+        if (isExact) {
+            matchBadgeEl.className = "text-[10px] bg-green-900/40 text-green-400 border border-green-700/50 px-2 py-0.5 rounded font-semibold";
+            matchBadgeEl.innerText = "Exacto";
+        } else {
+            matchBadgeEl.className = "text-[10px] bg-accent/20 text-accent border border-accent/40 px-2 py-0.5 rounded font-semibold";
+            matchBadgeEl.innerText = "Similar";
         }
     }
 
-    const card = document.getElementById('ghostHistoryCard');
-    if (foundEx && card) {
-        state.ghostSetsData = JSON.parse(JSON.stringify(foundEx.sets));
-        const daysAgo = Math.floor((new Date() - new Date(foundDate + 'T00:00:00')) / (1000 * 60 * 60 * 24));
-        const dateObj = new Date(foundDate + 'T00:00:00');
-        const dateStr = dateObj.toLocaleDateString('es-ES');
-
-        document.getElementById('ghostDateText').innerText = `Hace ${daysAgo} días (${dateStr})`;
-        const setsStrs = foundEx.sets.map(s => `${s.reps}x${s.weight}${s.unit}${s.isDropSet ? '(DS)' : ''}`);
-        document.getElementById('ghostSetsText').innerText = setsStrs.join(', ');
-
-        let maxW = 0, maxR = 0;
-        foundEx.sets.forEach(s => {
-            if (s.weight > maxW) { maxW = s.weight; maxR = s.reps; }
+    // Renderizado legible de series previas
+    const setsContainerEl = document.getElementById('ghostSetsText');
+    if (setsContainerEl) {
+        const badges = foundEx.sets.map((s, idx) => {
+            const unit = escapeHTML(s.unit || 'kg');
+            const dsTag = s.isDropSet ? '<span class="text-accent font-bold ml-1 text-[10px]">DS</span>' : '';
+            return `<span class="inline-flex items-center bg-dark px-2 py-1 rounded border border-gray-700/70 text-xs font-mono mr-1.5 mb-1.5">
+                <span class="text-gray-400 mr-1.5">#${idx + 1}</span>
+                <span class="font-bold text-white">${s.reps}</span><span class="text-gray-400 text-[10px] mx-0.5">x</span><span class="font-bold text-primary">${s.weight}</span><span class="text-gray-400 text-[10px] ml-0.5">${unit}</span>
+                ${dsTag}
+            </span>`;
         });
-        document.getElementById('ghostMaxText').innerText = `${maxW} kg x ${maxR}`;
-        card.classList.remove('hidden');
-    } else if (card) {
-        card.classList.add('hidden');
-        state.ghostSetsData = null;
+        setsContainerEl.innerHTML = `<div class="flex flex-wrap items-center">${badges.join('')}</div>`;
+    }
+
+    // Top Set con la unidad correspondiente (kg o lbs)
+    let maxW = 0, maxR = 0, maxUnit = 'kg';
+    foundEx.sets.forEach(s => {
+        const w = Number(s.weight) || 0;
+        if (w > maxW) {
+            maxW = w;
+            maxR = s.reps;
+            maxUnit = s.unit || 'kg';
+        }
+    });
+    const maxTextEl = document.getElementById('ghostMaxText');
+    if (maxTextEl) {
+        maxTextEl.innerText = `${maxW} ${maxUnit} × ${maxR}`;
+    }
+
+    card.classList.remove('hidden');
+}
+
+function applyGhostExerciseName() {
+    if (state.ghostMatchedExerciseName) {
+        const inputName = document.getElementById('inputName');
+        if (inputName) {
+            inputName.value = state.ghostMatchedExerciseName;
+            checkGhostData(state.ghostMatchedExerciseName);
+            UI.showToast(`Nombre actualizado a "${state.ghostMatchedExerciseName}"`, "info");
+        }
     }
 }
 
 function copyGhostSets() {
-    if (!state.ghostSetsData) return;
+    if (!state.ghostSetsData || state.ghostSetsData.length === 0) {
+        UI.showToast("No hay series previas disponibles para copiar", "warning");
+        return;
+    }
+
+    // Autocompletar nombre y grupo si el usuario escribió un término parcial
+    if (state.ghostMatchedExerciseName) {
+        const inputName = document.getElementById('inputName');
+        if (inputName) inputName.value = state.ghostMatchedExerciseName;
+    }
+    if (state.ghostMatchedMuscle) {
+        const inputMuscle = document.getElementById('inputMuscle');
+        if (inputMuscle && (!inputMuscle.value || inputMuscle.value === '')) {
+            const options = Array.from(inputMuscle.options);
+            const matchOpt = options.find(o => normalizeExerciseName(o.value) === normalizeExerciseName(state.ghostMatchedMuscle));
+            if (matchOpt) inputMuscle.value = matchOpt.value;
+        }
+    }
+
     const container = document.getElementById('setsContainer');
     if (!container) return;
     container.innerHTML = '';
@@ -611,11 +878,16 @@ function copyGhostSets() {
             addSetRow();
             const rows = container.querySelectorAll('.set-group');
             const lastRow = rows[rows.length - 1];
-            lastRow.querySelector('.weight-input').value = s.weight;
-            lastRow.querySelector('.unit-select').value = s.unit || 'kg';
+            if (!lastRow) return;
+            const wInput = lastRow.querySelector('.weight-input');
+            const uSelect = lastRow.querySelector('.unit-select');
             const repsInput = lastRow.querySelector('.reps-input');
-            repsInput.value = '';
-            repsInput.placeholder = s.reps;
+            if (wInput) wInput.value = s.weight;
+            if (uSelect) uSelect.value = s.unit || 'kg';
+            if (repsInput) {
+                repsInput.value = '';
+                repsInput.placeholder = s.reps;
+            }
         } else {
             const rows = container.querySelectorAll('.set-group');
             if (rows.length === 0) return;
@@ -626,15 +898,23 @@ function copyGhostSets() {
                 const dsContainer = lastRow.querySelector('.drop-sets-container');
                 const dsRows = dsContainer.querySelectorAll('.drop-set');
                 const lastDsRow = dsRows[dsRows.length - 1];
-                lastDsRow.querySelector('.weight-input').value = s.weight;
-                lastDsRow.querySelector('.unit-select').value = s.unit || 'kg';
+                if (!lastDsRow) return;
+                const wInput = lastDsRow.querySelector('.weight-input');
+                const uSelect = lastDsRow.querySelector('.unit-select');
                 const repsInput = lastDsRow.querySelector('.reps-input');
-                repsInput.value = '';
-                repsInput.placeholder = s.reps;
+                if (wInput) wInput.value = s.weight;
+                if (uSelect) uSelect.value = s.unit || 'kg';
+                if (repsInput) {
+                    repsInput.value = '';
+                    repsInput.placeholder = s.reps;
+                }
             }
         }
     });
-    UI.showToast("📋 Pesos anteriores precargados", "info");
+
+    recalcSets();
+    const exName = state.ghostMatchedExerciseName || 'ejercicio';
+    UI.showToast(`📋 Cargas de "${exName}" precargadas`, "success");
 }
 
 function handleAddSubmit(e) {
@@ -695,6 +975,9 @@ function handleAddSubmit(e) {
 
     document.getElementById('ghostHistoryCard')?.classList.add('hidden');
     state.ghostSetsData = null;
+    state.ghostMatchedExerciseName = null;
+    state.ghostMatchedMuscle = null;
+    populateExerciseDatalist();
 
     UI.showToast("Ejercicio añadido a la sesión actual", "success");
 }
@@ -1078,6 +1361,7 @@ async function handleAddRoutine(e) {
     }
 
     document.getElementById('routineName').value = '';
+    populateExerciseDatalist();
     UI.renderRoutine(state.routineData);
     UI.showToast("Plan de rutina actualizado", "success");
 }
@@ -1213,6 +1497,7 @@ async function handleImportExcel(event) {
         await WorkoutsService.saveBatchSessions(state.gymData, state.currentUser.id);
         localStorage.setItem('hypertrack_gymData', JSON.stringify(state.gymData));
 
+        populateExerciseDatalist();
         refreshActiveView();
         UI.showModal("Importación Exitosa", `Se han añadido ${countAdded} series validadas y vinculadas inmutablemente a tu cuenta.`);
     } catch (err) {
@@ -1273,6 +1558,9 @@ window.appHandler = {
     addDropSet,
     recalcSets,
     copyGhostSets,
+    checkGhostData,
+    applyGhostExerciseName,
+    populateExerciseDatalist,
     loadSuggestion,
     removeActiveWorkoutExercise,
     editDuration,
@@ -1312,6 +1600,9 @@ window.stopRestTimer = stopRestTimer;
 window.addSetRow = addSetRow;
 window.addDropSet = addDropSet;
 window.copyGhostSets = copyGhostSets;
+window.checkGhostData = checkGhostData;
+window.applyGhostExerciseName = applyGhostExerciseName;
+window.populateExerciseDatalist = populateExerciseDatalist;
 window.handleAddRoutine = handleAddRoutine;
 window.toggleRoutineView = toggleRoutineView;
 window.closeEditModal = closeEditExerciseModal;
@@ -1336,8 +1627,24 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('addExerciseForm')?.addEventListener('submit', handleAddSubmit);
     document.getElementById('addRoutineForm')?.addEventListener('submit', handleAddRoutine);
 
-    // Event listener del Asistente Ghost
-    document.getElementById('inputName')?.addEventListener('input', (e) => checkGhostData(e.target.value));
+    // Event listeners del Asistente Ghost y autocompletado
+    const inputName = document.getElementById('inputName');
+    if (inputName) {
+        const handleGhostTrigger = (e) => checkGhostData(e.target.value);
+        inputName.addEventListener('input', handleGhostTrigger);
+        inputName.addEventListener('change', handleGhostTrigger);
+        inputName.addEventListener('focus', (e) => {
+            if (e.target.value) checkGhostData(e.target.value);
+        });
+    }
+
+    const inputMuscle = document.getElementById('inputMuscle');
+    if (inputMuscle) {
+        inputMuscle.addEventListener('change', () => {
+            const currentName = document.getElementById('inputName')?.value;
+            if (currentName) checkGhostData(currentName);
+        });
+    }
 
     // Delegación para botones dinámicos en Navbar
     document.addEventListener('click', (e) => {
@@ -1345,6 +1652,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.closest('#btnNavbarOpenAuth')) openAuthModal('login');
     });
 
+    populateExerciseDatalist();
     initWorkoutState();
     initAuth();
 });

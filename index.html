@@ -559,8 +559,12 @@
                     </div>
                     
                     <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-400 mb-1">Nombre del Ejercicio</label>
-                        <input type="text" id="inputName" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" autocomplete="off">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium text-gray-400">Nombre del Ejercicio</label>
+                            <span class="text-[11px] text-gray-500 font-normal">Autocompleta de tus sesiones</span>
+                        </div>
+                        <input type="text" id="inputName" list="exerciseSuggestions" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" autocomplete="off">
+                        <datalist id="exerciseSuggestions"></datalist>
                     </div>
 
                     <div class="mb-6">
@@ -569,24 +573,33 @@
                     </div>
 
                     <!-- ASISTENTE GHOST DE CARGAS PREVIAS -->
-                    <div id="ghostHistoryCard" class="hidden bg-darker border border-gray-700 rounded-xl p-4 mb-6 relative overflow-hidden shadow-lg">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
-                        <div class="flex justify-between items-start mb-3 pl-2">
-                            <div>
-                                <h4 class="text-accent font-bold text-sm flex items-center"><i class="ph ph-ghost mr-1.5 text-lg"></i> Asistente de Carga Anterior</h4>
+                    <div id="ghostHistoryCard" class="hidden bg-darker border border-gray-700 rounded-xl p-4 mb-6 relative overflow-hidden shadow-lg transition-all duration-300">
+                        <div class="absolute top-0 left-0 w-1.5 h-full bg-accent"></div>
+                        <div class="flex justify-between items-start mb-2.5 pl-2">
+                            <div class="pr-2 min-w-0 flex-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="text-accent font-bold text-xs uppercase tracking-wider flex items-center">
+                                        <i class="ph ph-ghost mr-1 text-sm"></i> Asistente de Carga Anterior
+                                    </h4>
+                                    <span id="ghostMatchBadge" class="text-[10px] bg-accent/20 text-accent border border-accent/40 px-1.5 py-0.2 rounded font-semibold"></span>
+                                </div>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <h5 id="ghostExerciseName" onclick="window.appHandler.applyGhostExerciseName()" title="Toca para usar este nombre exacto" class="text-sm font-bold text-white hover:text-primary transition-colors cursor-pointer truncate"></h5>
+                                    <button type="button" onclick="window.appHandler.applyGhostExerciseName()" title="Aplicar nombre" class="text-gray-400 hover:text-primary text-xs flex-shrink-0"><i class="ph ph-check-circle"></i></button>
+                                </div>
                                 <p id="ghostDateText" class="text-xs text-gray-400 mt-0.5">Última vez: --</p>
                             </div>
-                            <div class="text-right">
-                                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-0.5">Top Set</p>
-                                <p id="ghostMaxText" class="text-sm font-bold text-white">--</p>
+                            <div class="text-right flex-shrink-0 pl-2">
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Top Set</p>
+                                <p id="ghostMaxText" class="text-sm font-bold text-white font-mono">--</p>
                             </div>
                         </div>
                         <div class="bg-dark p-2.5 rounded-lg border border-gray-800 mb-3 ml-2">
-                            <p id="ghostSetsText" class="text-xs text-gray-300 font-mono leading-relaxed"></p>
+                            <div id="ghostSetsText" class="text-xs text-gray-300 font-mono leading-relaxed"></div>
                         </div>
                         <div class="pl-2">
-                            <button type="button" onclick="copyGhostSets()" class="text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-2 rounded-lg transition-colors flex items-center border border-gray-700 w-full justify-center">
-                                <i class="ph ph-copy mr-1.5 text-primary text-lg"></i> Copiar cargas a la sesión actual
+                            <button type="button" onclick="copyGhostSets()" class="text-xs font-semibold bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-gray-200 px-3 py-2.5 rounded-lg transition-colors flex items-center border border-gray-700 w-full justify-center shadow">
+                                <i class="ph ph-copy mr-1.5 text-primary text-base"></i> Copiar cargas a la sesión actual
                             </button>
                         </div>
                     </div>
