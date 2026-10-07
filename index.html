@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0a0a0a">
-    <meta name="description" content="HyperTrack - Registra y analiza tu progreso en el gimnasio.">
+    <meta name="description" content="TrackGym / HyperTrack - Registra y analiza tu progreso en el gimnasio con arquitectura SaaS Multi-usuario.">
     <!-- Favicon de pesa temporal -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏋️</text></svg>">
-    <title>HyperTrack - Gym Tracker</title>
+    <title>TrackGym - Gym Tracker SaaS</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,6 +20,9 @@
 
     <!-- SheetJS para Excel Import/Export -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Supabase JS Client v2 (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         tailwind.config = {
@@ -91,11 +94,11 @@
     <nav class="bg-card border-b md:border-b-0 md:border-r border-gray-800 w-full md:w-64 flex-shrink-0 z-10 flex md:flex-col justify-between order-last md:order-first">
         <div class="hidden md:flex items-center p-6 border-b border-gray-800">
             <i class="ph-fill ph-barbell text-3xl text-primary mr-3"></i>
-            <h1 class="text-xl font-bold tracking-wider">Hyper<span class="text-primary">Track</span></h1>
+            <h1 class="text-xl font-bold tracking-wider">Track<span class="text-primary">Gym</span></h1>
         </div>
         
         <div class="flex md:flex-col w-full md:flex-1 justify-around md:justify-start md:p-4">
-            <button onclick="switchTab('dashboard')" class="nav-btn w-full flex flex-col md:flex-row items-center md:justify-start p-3 md:mb-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors" data-target="dashboard">
+            <button onclick="switchTab('dashboard')" class="nav-btn w-full flex flex-col md:flex-row items-center md:justify-start p-3 md:mb-2 rounded-lg text-primary bg-gray-800 hover:text-white hover:bg-gray-800 transition-colors" data-target="dashboard">
                 <i class="ph ph-chart-line-up text-2xl md:mr-3 md:text-xl mb-1 md:mb-0"></i>
                 <span class="text-xs md:text-base font-semibold">Dashboard</span>
             </button>
@@ -116,27 +119,125 @@
                 <span class="text-xs md:text-base font-semibold">Ajustes</span>
             </button>
         </div>
+
+        <!-- Sección de Perfil / Usuario (Desktop & Móvil) -->
+        <div class="hidden md:block p-4 border-t border-gray-800">
+            <div id="navUserSection">
+                <button onclick="window.appHandler.openAuthModal('login')" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center text-sm shadow-lg shadow-primary/20">
+                    <i class="ph ph-sign-in mr-2 text-lg"></i> Iniciar Sesión
+                </button>
+            </div>
+        </div>
     </nav>
 
     <!-- Main Content Area -->
     <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-dark relative">
+
+        <!-- Barra superior móvil para Usuario / Auth -->
+        <div class="md:hidden flex justify-between items-center mb-4 pb-3 border-b border-gray-800">
+            <div class="flex items-center">
+                <i class="ph-fill ph-barbell text-2xl text-primary mr-2"></i>
+                <h1 class="text-lg font-bold tracking-wider">Track<span class="text-primary">Gym</span></h1>
+            </div>
+            <div id="mobileAuthTrigger">
+                <button onclick="window.appHandler.openAuthModal('login')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 flex items-center">
+                    <i class="ph ph-user mr-1"></i> Cuenta
+                </button>
+            </div>
+        </div>
         
-        <!-- Alertas y Modales -->
-        <div id="toast" class="fixed top-4 right-4 bg-accent text-white px-4 py-2 rounded-lg shadow-lg transform transition-transform duration-300 translate-y-[-150%] z-50 flex items-center">
+        <!-- Notificación Toast -->
+        <div id="toast" class="fixed top-4 right-4 bg-accent text-white px-4 py-2.5 rounded-xl shadow-2xl transform transition-transform duration-300 translate-y-[-150%] z-50 flex items-center">
             <i class="ph ph-check-circle mr-2 text-xl"></i>
             <span id="toast-msg">Mensaje</span>
         </div>
 
-        <div id="customModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-            <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl max-w-md w-full mx-4">
+        <!-- Modal Informativo Genérico -->
+        <div id="customModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
+            <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl max-w-md w-full">
                 <h3 id="modalTitle" class="text-xl font-bold text-white mb-2">Título</h3>
                 <p id="modalBody" class="text-gray-400 mb-6 text-sm leading-relaxed">Mensaje</p>
                 <div class="flex justify-end">
-                    <button onclick="closeModal()" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors">Entendido</button>
+                    <button onclick="closeModal()" class="bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold transition-colors">Entendido</button>
                 </div>
             </div>
         </div>
 
+        <!-- Modal de Autenticación (Login / Signup) -->
+        <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-md p-4">
+            <div class="bg-card border border-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center space-x-2">
+                        <i class="ph-fill ph-barbell text-2xl text-primary"></i>
+                        <h3 class="text-xl font-bold text-white">Track<span class="text-primary">Gym</span></h3>
+                    </div>
+                    <button onclick="window.appHandler.closeAuthModal()" class="text-gray-400 hover:text-white p-1">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Tabs de Autenticación -->
+                <div class="flex border-b border-gray-800 mb-6">
+                    <button id="tabBtnLogin" onclick="window.appHandler.switchAuthTab('login')" class="flex-1 py-3 text-sm font-semibold border-b-2 border-primary text-white transition-colors">
+                        Iniciar Sesión
+                    </button>
+                    <button id="tabBtnSignup" onclick="window.appHandler.switchAuthTab('signup')" class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-white transition-colors">
+                        Crear Cuenta
+                    </button>
+                </div>
+
+                <!-- Formulario Iniciar Sesión -->
+                <form id="authLoginForm" class="space-y-4">
+                    <div id="loginErrorBox" class="hidden p-3 bg-red-900/40 border border-red-800 text-red-300 text-xs rounded-xl flex items-center"></div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Correo Electrónico</label>
+                        <input type="email" id="loginEmail" required class="w-full bg-darker border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-primary transition-colors" placeholder="tu@email.com">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Contraseña</label>
+                        <input type="password" id="loginPassword" required class="w-full bg-darker border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-primary transition-colors" placeholder="••••••••">
+                    </div>
+                    <button type="submit" id="btnLoginSubmit" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center">
+                        <i class="ph ph-sign-in mr-2"></i> Iniciar Sesión
+                    </button>
+                </form>
+
+                <!-- Formulario Crear Cuenta -->
+                <form id="authSignupForm" class="space-y-4 hidden">
+                    <div id="signupErrorBox" class="hidden p-3 bg-red-900/40 border border-red-800 text-red-300 text-xs rounded-xl flex items-center"></div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre o Apodo</label>
+                        <input type="text" id="signupName" class="w-full bg-darker border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-primary transition-colors" placeholder="Ej. Alex Fit">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Correo Electrónico</label>
+                        <input type="email" id="signupEmail" required class="w-full bg-darker border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-primary transition-colors" placeholder="tu@email.com">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Contraseña</label>
+                            <input type="password" id="signupPassword" required minlength="6" class="w-full bg-darker border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-primary transition-colors" placeholder="Mínimo 6 caracteres">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Confirmar</label>
+                            <input type="password" id="signupConfirmPassword" required minlength="6" class="w-full bg-darker border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-primary transition-colors" placeholder="Repite contraseña">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Unidad de Peso Preferida</label>
+                        <select id="signupUnit" class="w-full bg-darker border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-primary transition-colors">
+                            <option value="kg">Kilogramos (kg)</option>
+                            <option value="lbs">Libras (lbs)</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="btnSignupSubmit" class="w-full bg-accent hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-accent/20 flex items-center justify-center">
+                        <i class="ph ph-user-plus mr-2"></i> Crear Cuenta
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Editar Ejercicio -->
         <div id="editExerciseModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
             <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
@@ -151,6 +252,7 @@
             </div>
         </div>
 
+        <!-- Modal Cambiar Fecha -->
         <div id="editDateModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
             <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl w-full max-w-sm">
                 <div class="flex justify-between items-center mb-4">
@@ -169,6 +271,7 @@
             </div>
         </div>
 
+        <!-- Modal Editar Ejercicio de Rutina -->
         <div id="editRoutineModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
             <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl w-full max-w-md">
                 <div class="flex justify-between items-center mb-4">
@@ -196,8 +299,8 @@
                             <option value="Espalda">Espalda</option>
                             <option value="Pierna">Pierna</option>
                             <option value="Hombro">Hombro</option>
-                            <option value="Bicep">Bícep</option>
-                            <option value="Tricep">Trícep</option>
+                            <option value="Bicep">Bíceps</option>
+                            <option value="Tricep">Tríceps</option>
                         </select>
                     </div>
                     <div>
@@ -212,27 +315,11 @@
             </div>
         </div>
 
-        <div id="muscleSuggestionModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
-            <div class="bg-card p-6 rounded-2xl border border-gray-800 shadow-2xl w-full max-w-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-white flex items-center"><i class="ph ph-lightning text-accent mr-2"></i> Sugerencias de Rutina</h3>
-                    <button onclick="closeMuscleSuggestionModal()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
-                </div>
-                <p class="text-sm text-gray-400 mb-4">Tienes estos ejercicios guardados en tu rutina. Toca uno para agregarlo:</p>
-                <div id="muscleSuggestionList" class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
-                    <!-- Botones dinámicos -->
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-800 text-center">
-                    <button onclick="closeMuscleSuggestionModal()" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors">Omitir y escribir manualmente</button>
-                </div>
-            </div>
-        </div>
-
         <!-- DASHBOARD TAB -->
         <section id="dashboard" class="tab-content active max-w-6xl mx-auto">
             <header class="mb-8">
                 <h2 class="text-3xl font-bold mb-2">Resumen de Progreso</h2>
-                <p class="text-gray-400">Analiza tu fuerza y recibe sugerencias de sobrecarga.</p>
+                <p class="text-gray-400">Analiza tu fuerza, volumen semanal y sugerencias de hipertrofia.</p>
             </header>
 
             <!-- Estadísticas Rápidas -->
@@ -253,7 +340,7 @@
                 </div>
             </div>
 
-            <!-- NUEVO: Mapeo de Fatiga -->
+            <!-- Mapeo de Fatiga Muscular -->
             <div class="mb-8">
                 <h3 class="text-xl font-bold mb-3 flex items-center"><i class="ph ph-activity text-accent mr-2"></i> Estado de Recuperación (Últimas 72h)</h3>
                 <div id="fatigueContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -262,15 +349,15 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <!-- Gráfica de 1RM -->
+                <!-- Gráfica de 1RM Epley -->
                 <div class="glass-card rounded-2xl p-4 md:p-6 shadow-xl flex flex-col">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-2">
                         <h3 class="text-lg font-semibold flex items-center"><i class="ph ph-trend-up text-primary mr-2"></i> Fuerza Estimada (1RM)</h3>
-                        <select id="chartExerciseSelect" onchange="updateChart()" class="mt-2 md:mt-0 bg-darker border border-gray-700 text-white rounded-lg p-2 text-sm outline-none focus:border-primary max-w-xs w-full md:w-auto">
+                        <select id="chartExerciseSelect" onchange="window.UI?.renderProgressChart(window.gymData)" class="mt-2 md:mt-0 bg-darker border border-gray-700 text-white rounded-lg p-2 text-sm outline-none focus:border-primary max-w-xs w-full md:w-auto">
                             <!-- Se llenará dinámicamente -->
                         </select>
                     </div>
-                    <p class="text-xs text-gray-400 mb-4">Basado en la fórmula Epley (Peso x Reps).</p>
+                    <p class="text-xs text-gray-400 mb-4">Basado en la fórmula oficial Epley: Peso × (1 + Reps / 30).</p>
                     <div class="w-full h-64 relative flex-1">
                         <canvas id="progressChart"></canvas>
                     </div>
@@ -287,7 +374,7 @@
             </div>
 
             <h3 class="text-2xl font-bold mb-4 mt-10">Sugerencias Inteligentes (Próxima Sesión)</h3>
-            <p class="text-gray-400 mb-6">Basado en tus últimos registros, recomendaciones para la sobrecarga progresiva.</p>
+            <p class="text-gray-400 mb-6">Recomendaciones algorítmicas de sobrecarga progresiva basadas en tus últimos registros.</p>
             
             <div id="suggestionsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Sugerencias generadas por JS -->
@@ -299,7 +386,7 @@
             <header class="mb-8 flex justify-between items-end">
                 <div>
                     <h2 class="text-3xl font-bold mb-2">Tu Historial</h2>
-                    <p class="text-gray-400">Revisa todos tus entrenamientos pasados.</p>
+                    <p class="text-gray-400">Revisa y gestiona todos tus entrenamientos pasados.</p>
                 </div>
                 <div class="text-sm text-gray-500 font-semibold bg-gray-800 px-3 py-1 rounded-full">
                     <span id="totalWorkouts">0</span> Sesiones
@@ -308,17 +395,17 @@
 
             <div class="mb-6 flex flex-col md:flex-row gap-4">
                 <div class="flex-1">
-                    <input type="text" id="historySearch" placeholder="Buscar por ejercicio o músculo..." class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" oninput="renderHistory()">
+                    <input type="text" id="historySearch" placeholder="Buscar por ejercicio o músculo..." class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" oninput="window.appHandler.switchTab('history')">
                 </div>
                 <div class="w-full md:w-48">
-                    <select id="historyFilterMuscle" class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" onchange="renderHistory()">
+                    <select id="historyFilterMuscle" class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" onchange="window.appHandler.switchTab('history')">
                         <option value="">Todos los músculos</option>
                         <option value="Pecho">Pecho</option>
                         <option value="Espalda">Espalda</option>
                         <option value="Pierna">Pierna</option>
                         <option value="Hombro">Hombro</option>
-                        <option value="Bicep">Bicep</option>
-                        <option value="Tricep">Tricep</option>
+                        <option value="Bicep">Bícep</option>
+                        <option value="Tricep">Trícep</option>
                     </select>
                 </div>
             </div>
@@ -333,7 +420,7 @@
             <header class="mb-8 flex justify-between items-end flex-wrap gap-4">
                 <div>
                     <h2 class="text-3xl font-bold mb-2">Mi Rutina</h2>
-                    <p class="text-gray-400">Diseña tu plan de entrenamiento y guarda tu historial de ejercicios.</p>
+                    <p class="text-gray-400">Diseña tu plan semanal de entrenamiento y organiza tu split.</p>
                 </div>
                 <div class="flex gap-2 bg-darker p-1 rounded-lg border border-gray-800">
                     <button id="btnViewActive" onclick="toggleRoutineView('active')" class="px-4 py-2 rounded-md bg-gray-800 text-white font-semibold text-sm transition-colors">Activa</button>
@@ -346,7 +433,7 @@
                 <!-- Formulario para agregar a la rutina -->
                 <div class="glass-card rounded-2xl p-5 border border-gray-800 shadow-xl mb-6">
                     <h3 class="text-lg font-bold mb-4 flex items-center"><i class="ph ph-plus-circle text-primary mr-2"></i> Añadir Ejercicio al Plan</h3>
-                    <form id="addRoutineForm" onsubmit="handleAddRoutine(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <form id="addRoutineForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Día</label>
                             <select id="routineDay" required class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none">
@@ -361,7 +448,7 @@
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Ejercicio</label>
-                            <input type="text" id="routineName" required placeholder="Ej. Press Plano" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none">
+                            <input type="text" id="routineName" required placeholder="Ej. Press Militar" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none">
                         </div>
                         <button type="submit" class="bg-primary hover:bg-blue-600 text-white font-bold py-2.5 px-4 rounded-lg transition-colors w-full">Guardar</button>
                     </form>
@@ -389,7 +476,7 @@
         <section id="add" class="tab-content max-w-3xl mx-auto">
             <header class="mb-8">
                 <h2 class="text-3xl font-bold mb-2">Nuevo Registro</h2>
-                <p class="text-gray-400">Añade ejercicios a tu sesión de hoy.</p>
+                <p class="text-gray-400">Añade ejercicios a tu sesión de entrenamiento en curso.</p>
             </header>
 
             <!-- Workout Session Flow UI -->
@@ -416,7 +503,7 @@
                     </button>
                 </div>
                 
-                <!-- REST TIMER BAR -->
+                <!-- Barra de Temporizador de Descanso -->
                 <div class="flex items-center gap-1.5 md:gap-2 bg-gray-800/30 p-2 md:p-2.5 rounded-lg border border-gray-700/50">
                     <i class="ph ph-timer text-gray-400 text-lg hidden md:block"></i>
                     <span class="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wider mr-1">Descanso</span>
@@ -438,23 +525,23 @@
             </div>
 
             <div class="glass-card rounded-2xl p-6 shadow-xl">
-                <!-- Sugerencias Inteligentes -->
+                <!-- Sugerencias Inteligentes basadas en rutina de hoy -->
                 <div id="suggestionsContainer" class="hidden mb-6 bg-blue-900/20 border border-blue-900/50 rounded-xl p-4 transition-all">
-                    <p class="text-xs text-primary font-bold uppercase tracking-wider mb-2 flex items-center"><i class="ph ph-lightning mr-1"></i> Toca para llenar la rutina de hoy</p>
+                    <p class="text-xs text-primary font-bold uppercase tracking-wider mb-2 flex items-center"><i class="ph ph-lightning mr-1"></i> Rutina sugerida para hoy:</p>
                     <div id="suggestionsList" class="flex flex-wrap gap-2">
                         <!-- Chips generados por JS -->
                     </div>
                 </div>
 
-                <form id="addExerciseForm" onsubmit="handleAddSubmit(event)">
+                <form id="addExerciseForm">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
-                            <input type="date" id="inputDate" required onchange="updateSuggestions()" class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
+                            <input type="date" id="inputDate" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-400 mb-1">Grupo Muscular</label>
-                            <select id="inputMuscle" onchange="handleMuscleChange()" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
+                            <select id="inputMuscle" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors">
                                 <option value="" disabled selected>Selecciona músculo...</option>
                                 <option value="Pecho">Pecho</option>
                                 <option value="Espalda">Espalda</option>
@@ -468,21 +555,20 @@
                     
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-400 mb-1">Nombre del Ejercicio</label>
-                        <input type="text" id="inputName" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" list="exerciseSuggestions" autocomplete="off">
-                        <datalist id="exerciseSuggestions"></datalist>
+                        <input type="text" id="inputName" placeholder="Ej. Press Inclinado" required class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors" autocomplete="off">
                     </div>
 
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-400 mb-1">Notas (Opcional)</label>
-                        <textarea id="inputNote" rows="2" placeholder="Ej. Me costó la última serie..." class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors resize-none"></textarea>
+                        <textarea id="inputNote" rows="2" placeholder="Ej. Buenas sensaciones en la última serie..." class="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-colors resize-none"></textarea>
                     </div>
 
-                    <!-- ASISTENTE GHOST -->
+                    <!-- ASISTENTE GHOST DE CARGAS PREVIAS -->
                     <div id="ghostHistoryCard" class="hidden bg-darker border border-gray-700 rounded-xl p-4 mb-6 relative overflow-hidden shadow-lg">
                         <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
                         <div class="flex justify-between items-start mb-3 pl-2">
                             <div>
-                                <h4 class="text-accent font-bold text-sm flex items-center"><i class="ph ph-ghost mr-1.5 text-lg"></i> Asistente de Carga</h4>
+                                <h4 class="text-accent font-bold text-sm flex items-center"><i class="ph ph-ghost mr-1.5 text-lg"></i> Asistente de Carga Anterior</h4>
                                 <p id="ghostDateText" class="text-xs text-gray-400 mt-0.5">Última vez: --</p>
                             </div>
                             <div class="text-right">
@@ -495,11 +581,12 @@
                         </div>
                         <div class="pl-2">
                             <button type="button" onclick="copyGhostSets()" class="text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-2 rounded-lg transition-colors flex items-center border border-gray-700 w-full justify-center">
-                                <i class="ph ph-copy mr-1.5 text-primary text-lg"></i> Copiar pesos a esta sesión
+                                <i class="ph ph-copy mr-1.5 text-primary text-lg"></i> Copiar cargas a la sesión actual
                             </button>
                         </div>
                     </div>
 
+                    <!-- Contenedor dinámico de Series -->
                     <div class="bg-darker p-4 rounded-xl border border-gray-800 mb-6">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="font-semibold text-sm">Series (Sets)</h4>
@@ -508,7 +595,6 @@
                             </button>
                         </div>
                         <div id="setsContainer" class="space-y-3">
-                            <!-- Filas de series -->
                             <div class="set-group mb-2">
                                 <div class="flex items-center gap-2 md:gap-3 set-row main-set">
                                     <span class="text-gray-500 font-bold w-6 set-number">#1</span>
@@ -524,13 +610,14 @@
                                         </select>
                                     </div>
                                     <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
+                                    <button type="button" onclick="this.closest('.set-group').remove(); window.appHandler.recalcSets()" class="text-gray-600 hover:text-red-400 p-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
                                 </div>
                                 <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center">
+                    <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center shadow-lg shadow-primary/20">
                         <i class="ph ph-floppy-disk mr-2 text-xl"></i> Guardar Ejercicio
                     </button>
                 </form>
@@ -541,23 +628,23 @@
         <section id="settings" class="tab-content max-w-3xl mx-auto">
             <header class="mb-8">
                 <h2 class="text-3xl font-bold mb-2">Configuración y Datos</h2>
-                <p class="text-gray-400">Gestiona tu historial y preferencias.</p>
+                <p class="text-gray-400">Gestiona respaldos, migración e importación segura.</p>
             </header>
 
             <div class="grid grid-cols-1 gap-6">
                 <!-- Excel Data -->
                 <div class="glass-card rounded-2xl p-6 shadow-xl border border-gray-800">
-                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="ph ph-file-xls text-accent mr-2"></i> Excel (Respaldo)</h3>
-                    <p class="text-sm text-gray-400 mb-6">Sube tu propio archivo de Excel o descarga tu progreso actual para analizarlo donde quieras.</p>
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="ph ph-file-xls text-accent mr-2"></i> Excel (Respaldo e Importación Segura)</h3>
+                    <p class="text-sm text-gray-400 mb-6">Descarga tu historial completo o sube un archivo Excel validado para sincronizarlo a tu cuenta privada.</p>
                     
                     <div class="space-y-3">
                         <button onclick="exportExcel()" class="w-full flex items-center justify-center py-3 bg-darker hover:bg-gray-800 border border-gray-700 rounded-lg text-white font-semibold transition-colors">
                             <i class="ph ph-download-simple mr-2 text-lg"></i> Descargar Historial
                         </button>
                         
-                        <input type="file" id="importExcelFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleImport(event)">
-                        <button onclick="document.getElementById('importExcelFile').click()" class="w-full flex items-center justify-center py-3 bg-accent hover:bg-green-600 text-white rounded-lg font-semibold transition-colors">
-                            <i class="ph ph-upload-simple mr-2 text-lg"></i> Importar Datos
+                        <input type="file" id="importExcelFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="window.appHandler.handleImportExcel(event)">
+                        <button onclick="document.getElementById('importExcelFile').click()" class="w-full flex items-center justify-center py-3 bg-accent hover:bg-green-600 text-white rounded-lg font-semibold transition-colors shadow-lg shadow-accent/20">
+                            <i class="ph ph-upload-simple mr-2 text-lg"></i> Importar Datos desde Excel
                         </button>
                     </div>
                 </div>
@@ -565,1969 +652,16 @@
                 <!-- Zona de Peligro -->
                 <div class="glass-card rounded-2xl p-6 shadow-xl border border-red-900/40">
                     <h3 class="text-xl font-bold mb-1 flex items-center text-red-400"><i class="ph ph-warning-octagon mr-2"></i> Zona de Peligro</h3>
-                    <p class="text-sm text-gray-500 mb-6">Estas acciones son permanentes y no se pueden deshacer. Descarga un respaldo en Excel antes de continuar.</p>
+                    <p class="text-sm text-gray-500 mb-6">Estas acciones borran los registros exclusivamente de tu cuenta actual. Descarga un respaldo antes de continuar.</p>
                     <button onclick="deleteAllRecords()" class="w-full flex items-center justify-center py-3 bg-red-900/30 hover:bg-red-900/60 border border-red-800 rounded-lg text-red-400 font-semibold transition-colors">
-                        <i class="ph ph-trash mr-2 text-lg"></i> Eliminar Todos los Registros
+                        <i class="ph ph-trash mr-2 text-lg"></i> Eliminar Mis Registros
                     </button>
                 </div>
             </div>
         </section>
     </main>
 
-    <script>
-        // --- ESTADO DE LA APLICACIÓN ---
-        let volumeChartInstance = null;
-        let chartInstance = null;
-        window.routineData = { active: [], archived: [] };
-
-        // Datos iniciales estructurados, añadiendo la propiedad 'unit' para mayor precisión
-        // Basado en tu historial (asumiendo kg para barras/máquinas y lbs para mancuernas cuando se especifica)
-        var gymData = [
-            {
-                date: '2024-06-09',
-                exercises: [
-                    { name: 'Press Inclinado', muscle: 'Pecho', sets: [{reps: 10, weight: 20, unit: 'kg'}, {reps: 10, weight: 20, unit: 'kg'}, {reps: 10, weight: 20, unit: 'kg'}, {reps: 10, weight: 20, unit: 'kg'}] },
-                    { name: 'Press militar', muscle: 'Hombro', sets: [{reps: 10, weight: 10, unit: 'kg'}, {reps: 10, weight: 10, unit: 'kg'}, {reps: 10, weight: 10, unit: 'kg'}, {reps: 10, weight: 10, unit: 'kg'}] }
-                ]
-            },
-            {
-                date: '2024-06-18',
-                exercises: [
-                    { name: 'Press Inclinado', muscle: 'Pecho', sets: [{reps: 10, weight: 22.5, unit: 'kg'}, {reps: 8, weight: 25, unit: 'kg'}, {reps: 7, weight: 25, unit: 'kg'}, {reps: 5, weight: 25, unit: 'kg'}] },
-                    { name: 'Press militar', muscle: 'Hombro', sets: [{reps: 10, weight: 10, unit: 'kg'}, {reps: 10, weight: 10, unit: 'kg'}, {reps: 6, weight: 15, unit: 'kg'}, {reps: 6, weight: 15, unit: 'kg'}] }
-                ]
-            },
-            {
-                date: '2024-06-20',
-                exercises: [
-                    { name: 'Jalón al pecho en polea', muscle: 'Espalda', sets: [{reps: 11, weight: 45, unit: 'kg'}, {reps: 10, weight: 51.8, unit: 'kg'}, {reps: 10, weight: 51.8, unit: 'kg'}, {reps: 7, weight: 58.5, unit: 'kg'}] },
-                    { name: 'Curl de bicep con mancuerna', muscle: 'Bicep', sets: [{reps: 10, weight: 25, unit: 'lbs'}, {reps: 10, weight: 20, unit: 'lbs'}, {reps: 8, weight: 25, unit: 'lbs'}, {reps: 8, weight: 20, unit: 'lbs'}] }
-                ]
-            },
-            {
-                date: '2024-06-24',
-                exercises: [
-                    { name: 'Hack', muscle: 'Pierna', sets: [{reps: 12, weight: 15, unit: 'kg'}, {reps: 10, weight: 20, unit: 'kg'}, {reps: 7, weight: 30, unit: 'kg'}, {reps: 7, weight: 30, unit: 'kg'}] },
-                    { name: 'Peso muerto en maquina', muscle: 'Pierna', sets: [{reps: 10, weight: 25, unit: 'kg'}, {reps: 8, weight: 25, unit: 'kg'}, {reps: 8, weight: 20, unit: 'kg'}, {reps: 8, weight: 20, unit: 'kg'}] }
-                ]
-            },
-            {
-                date: '2024-08-31',
-                exercises: [
-                    { name: 'Press Inclinado', muscle: 'Pecho', sets: [{reps: 11, weight: 25, unit: 'kg'}, {reps: 7, weight: 30, unit: 'kg'}, {reps: 5, weight: 30, unit: 'kg'}] },
-                    { name: 'Press militar', muscle: 'Hombro', sets: [{reps: 7, weight: 20, unit: 'kg'}, {reps: 5, weight: 22.5, unit: 'kg'}, {reps: 8, weight: 20, unit: 'kg'}] }
-                ]
-            },
-            {
-                date: '2024-09-02',
-                exercises: [
-                    { name: 'Jalón al pecho en polea', muscle: 'Espalda', sets: [{reps: 7, weight: 65.3, unit: 'kg'}, {reps: 8, weight: 58.5, unit: 'kg'}, {reps: 7, weight: 58.5, unit: 'kg'}] },
-                    { name: 'Curl bicep con Barra plana', muscle: 'Bicep', sets: [{reps: 9, weight: 60, unit: 'lbs'}, {reps: 7, weight: 60, unit: 'lbs'}, {reps: 8, weight: 60, unit: 'lbs'}]}
-                ]
-            }
-        ];
-
-        // UI Helpers
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                if(btn.dataset.target === tabId) {
-                    btn.classList.add('text-primary', 'bg-gray-800');
-                    btn.classList.remove('text-gray-400');
-                } else {
-                    btn.classList.remove('text-primary', 'bg-gray-800');
-                    btn.classList.add('text-gray-400');
-                }
-            });
-
-            if(tabId === 'history') renderHistory();
-            if(tabId === 'routine') renderRoutine();
-            if(tabId === 'dashboard') {
-                updateQuickStats();
-                populateExerciseSelect();
-                updateChart();
-                updateVolumeChart();
-                updateFatigue();
-                generateSuggestions();
-            }
-        }
-
-        function updateQuickStats() {
-            const totalSessions = gymData.length;
-            const statTotal = document.getElementById('totalSessionsStat');
-            if (statTotal) statTotal.innerText = totalSessions;
-            
-            let totalMins = 0;
-            let countWithTime = 0;
-            gymData.forEach(s => {
-                if(s.duration) {
-                    let mins = 0;
-                    if(typeof s.duration === 'string' && s.duration.includes(':')) {
-                        const parts = s.duration.split(':').map(Number);
-                        if(parts.length === 3) {
-                            mins = parts[0] * 60 + parts[1] + (parts[2] || 0) / 60;
-                        } else if (parts.length === 2) {
-                            mins = parts[0] + (parts[1] || 0) / 60;
-                        }
-                    } else {
-                        mins = parseFloat(s.duration) || 0;
-                    }
-                    if(mins > 0) {
-                        totalMins += mins;
-                        countWithTime++;
-                    }
-                }
-            });
-            
-            const statTime = document.getElementById('avgTimeStat');
-            if (statTime) {
-                if(countWithTime > 0) {
-                    const avgMins = totalMins / countWithTime;
-                    const hrs = Math.floor(avgMins / 60);
-                    const mins = Math.floor(avgMins % 60);
-                    if (hrs > 0) {
-                        statTime.innerText = `${hrs}h ${mins}m`;
-                    } else {
-                        statTime.innerText = `${mins} min`;
-                    }
-                } else {
-                    statTime.innerText = `-- min`;
-                }
-            }
-        }
-
-        window.editDuration = function(date) {
-            const session = gymData.find(s => s.date === date);
-            if(!session) return;
-            const currentDuration = session.duration || '';
-            const newDuration = prompt(`Ingresa el tiempo del entrenamiento (Formato HH:MM:SS o MM:SS):`, currentDuration);
-            
-            if(newDuration !== null) {
-                const trimmed = newDuration.trim();
-                if (trimmed === '') {
-                    delete session.duration;
-                    if(window.saveToDB) window.saveToDB();
-                    if(window.refreshUI) window.refreshUI();
-                } else {
-                    // Validar formato básico (ej. 01:25:30 o 45:00) o que al menos sea un numero
-                    if(/^(\d+:)?\d+:\d+$/.test(trimmed) || !isNaN(parseFloat(trimmed))) {
-                        session.duration = trimmed;
-                        if(window.saveToDB) window.saveToDB();
-                        if(window.refreshUI) window.refreshUI();
-                        showToast("⏱️ Tiempo guardado");
-                    } else {
-                        alert("Formato inválido. Por favor usa HH:MM:SS (ej. 01:25:30) o MM:SS (ej. 45:00)");
-                    }
-                }
-            }
-        }
-
-        window.refreshUI = function() {
-            if(document.getElementById('dashboard').classList.contains('active')) switchTab('dashboard');
-            if(document.getElementById('history').classList.contains('active')) renderHistory();
-            if(document.getElementById('routine').classList.contains('active')) renderRoutine();
-            updateSuggestions();
-        }
-
-        function updateFatigue() {
-            const container = document.getElementById('fatigueContainer');
-            if(!container) return;
-            container.innerHTML = '';
-            
-            const muscles = ['Pecho', 'Espalda', 'Hombro', 'Pierna', 'Bicep', 'Tricep'];
-            const now = new Date();
-
-            // Normalizar texto: minúsculas + quitar tildes
-            const normalize = str => str ? str.toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
-
-            // Mapa de variantes aceptadas para cada grupo muscular
-            const muscleAliases = {
-                'Pecho': ['pecho', 'chest', 'pectoral', 'pectorales'],
-                'Espalda': ['espalda', 'dorsal', 'dorsales', 'back'],
-                'Hombro': ['hombro', 'hombros', 'deltoides', 'deltoide', 'shoulder'],
-                'Pierna': ['pierna', 'piernas', 'leg', 'legs', 'cuadricep', 'cuadriceps', 'gluteo', 'gluteos', 'isquio'],
-                'Bicep': ['bicep', 'biceps', 'bicepss'],
-                'Tricep': ['tricep', 'triceps']
-            };
-            
-            muscles.forEach(muscle => {
-                let lastDate = null;
-                const aliases = muscleAliases[muscle] || [normalize(muscle)];
-
-                gymData.forEach(session => {
-                    if(session.exercises.some(e => aliases.includes(normalize(e.muscle)))) {
-                        const sessionDate = new Date(session.date);
-                        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-                        if(!lastDate || sessionDate > lastDate) lastDate = sessionDate;
-                    }
-                });
-                
-                let status = 'Desconocido';
-                let colorClass = 'bg-gray-800 text-gray-400 border-gray-700';
-                
-                if(lastDate) {
-                    const diffHours = (now - lastDate) / (1000 * 60 * 60);
-                    if(diffHours < 48) { 
-                        status = 'Fatigado'; 
-                        colorClass = 'bg-red-900/30 text-red-400 border-red-800'; 
-                    } else if(diffHours < 72) { 
-                        status = 'Recuperando'; 
-                        colorClass = 'bg-yellow-900/30 text-yellow-400 border-yellow-800'; 
-                    } else { 
-                        status = 'Recuperado'; 
-                        colorClass = 'bg-green-900/30 text-green-400 border-green-800'; 
-                    }
-                } else {
-                    status = 'Sin datos';
-                }
-                
-                container.innerHTML += `
-                    <div class="px-2 py-3 rounded-xl border ${colorClass} text-center flex flex-col items-center justify-center transition-all shadow-sm">
-                        <span class="text-[10px] uppercase font-bold tracking-wider opacity-70 mb-1">${muscle}</span>
-                        <span class="text-sm font-semibold">${status}</span>
-                    </div>
-                `;
-            });
-        }
-
-        function updateVolumeChart() {
-            const ctx = document.getElementById('volumeChart');
-            if(!ctx) return;
-            
-            const muscles = ['Pecho', 'Espalda', 'Hombro', 'Pierna', 'Bicep', 'Tricep'];
-            const counts = { 'Pecho': 0, 'Espalda': 0, 'Hombro': 0, 'Pierna': 0, 'Bicep': 0, 'Tricep': 0 };
-
-            const normalize = str => str ? str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
-            const muscleAliases = {
-                'Pecho': ['pecho', 'chest', 'pectoral', 'pectorales'],
-                'Espalda': ['espalda', 'dorsal', 'dorsales', 'back'],
-                'Hombro': ['hombro', 'hombros', 'deltoides', 'deltoide', 'shoulder'],
-                'Pierna': ['pierna', 'piernas', 'leg', 'legs', 'cuadricep', 'cuadriceps', 'gluteo', 'gluteos', 'isquio', 'isquiotibiales', 'talon', 'talones'],
-                'Bicep': ['bicep', 'biceps', 'bicepss'],
-                'Tricep': ['tricep', 'triceps']
-            };
-            
-            if (gymData.length === 0) return;
-
-            // 1. Encontrar la fecha más reciente registrada en todo el historial
-            const dates = gymData.map(s => s.date).sort();
-            const latestDateStr = dates[dates.length - 1]; // Ej: última fecha con datos
-            
-            // 2. Calcular el rango de 7 días tomando como ancla la fecha más reciente (o 'hoy' si es más reciente)
-            const latestRecordedDate = new Date(latestDateStr + 'T00:00:00');
-            const today = new Date();
-            
-            // Si la última sesión fue hace menos de 7 días, usamos hoy como ancla; si son datos históricos, usamos la última sesión
-            const anchorDate = (today - latestRecordedDate) < (7 * 24 * 60 * 60 * 1000) ? today : latestRecordedDate;
-            
-            const sevenDaysBefore = new Date(anchorDate.getTime() - (6 * 24 * 60 * 60 * 1000));
-            const startStr = sevenDaysBefore.toISOString().split('T')[0];
-            const endStr = anchorDate.toISOString().split('T')[0];
-            
-            // 3. Contabilizar series efectivas
-            gymData.forEach(session => {
-                if(session.date >= startStr && session.date <= endStr) {
-                    session.exercises.forEach(ex => {
-                        const normMuscle = normalize(ex.muscle);
-                        for (const [key, aliases] of Object.entries(muscleAliases)) {
-                            if (aliases.includes(normMuscle)) {
-                                counts[key] += ex.sets.filter(s => !s.isDropSet).length;
-                                break;
-                            }
-                        }
-                    });
-                }
-            });
-
-        if (volumeChartInstance) volumeChartInstance.destroy();
-
-            volumeChartInstance = new Chart(ctx.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: muscles,
-                    datasets: [{
-                        label: `Series efectivas (${startStr} a ${endStr})`,
-                        data: muscles.map(m => counts[m]),
-                        backgroundColor: '#10b981',
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => `${ctx.parsed.y} series efectivas`
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
-                            ticks: { stepSize: 2, precision: 0 } 
-                        },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-msg').innerText = message;
-            toast.classList.remove('translate-y-[-150%]');
-            setTimeout(() => {
-                toast.classList.add('translate-y-[-150%]');
-            }, 3000);
-        }
-
-        function showModal(title, body) {
-            document.getElementById('modalTitle').innerText = title;
-            document.getElementById('modalBody').innerText = body;
-            document.getElementById('customModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('customModal').classList.add('hidden');
-        }
-
-        // --- MANEJO DE DATOS Y CONVERSIONES ---
-        function populateExerciseSelect() {
-            const select = document.getElementById('chartExerciseSelect');
-            const datalist = document.getElementById('exerciseSuggestions');
-            
-            const currentVal = select ? select.value : null;
-            if (select) select.innerHTML = '';
-            if (datalist) datalist.innerHTML = '';
-            
-            const uniqueExercises = new Set();
-            gymData.forEach(session => {
-                session.exercises.forEach(ex => uniqueExercises.add(ex.name));
-            });
-            
-            const sortedExercises = Array.from(uniqueExercises).sort();
-            sortedExercises.forEach(ex => {
-                if (select) {
-                    const opt = document.createElement('option');
-                    opt.value = ex;
-                    opt.innerText = ex;
-                    select.appendChild(opt);
-                }
-                if (datalist) {
-                    const dOpt = document.createElement('option');
-                    dOpt.value = ex;
-                    datalist.appendChild(dOpt);
-                }
-            });
-            
-            if (select) {
-                if (sortedExercises.includes(currentVal)) {
-                    select.value = currentVal;
-                } else if (sortedExercises.length > 0) {
-                    select.value = sortedExercises[0];
-                }
-            }
-        }
-
-        function convertToKg(weight, unit) {
-            if (!unit) return weight;
-            if (unit.toLowerCase() === 'lbs') return weight / 2.20462;
-            return weight;
-        }
-
-        function formatDisplayWeight(weight, unit) {
-            // Mostrar tal cual el usuario lo registró en el gimnasio
-            return `${weight} ${unit}`;
-        }
-
-        function updateChart() {
-            const selectedExercise = document.getElementById('chartExerciseSelect').value;
-            if(!selectedExercise) return;
-
-            const canvas = document.getElementById('progressChart');
-            const ctx = canvas.getContext('2d');
-
-            let labels = [];
-            let maxWeightPoints = [];
-            let avgWeightPoints = [];
-
-            // Filtrar y ordenar por fecha ascendente (usando copia para no mutar el global)
-            [...gymData].sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(session => {
-                const ex = session.exercises.find(e => e.name.toLowerCase() === selectedExercise.toLowerCase());
-                if (ex) {
-                    // Calcular peso máximo y promedio de la sesión (solo series no Drop Set)
-                    const mainSets = ex.sets.filter(s => !s.isDropSet);
-                    if (mainSets.length === 0) return;
-
-                    const weights = mainSets.map(s => convertToKg(s.weight, s.unit));
-                    const maxW = Math.max(...weights);
-                    const avgW = weights.reduce((a, b) => a + b, 0) / weights.length;
-
-                    const dateObj = new Date(session.date);
-                    dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
-                    const formattedDate = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-
-                    labels.push(formattedDate);
-                    maxWeightPoints.push(parseFloat(maxW.toFixed(1)));
-                    avgWeightPoints.push(parseFloat(avgW.toFixed(1)));
-                }
-            });
-
-            if (chartInstance) chartInstance.destroy();
-
-            Chart.defaults.color = '#9ca3af';
-            Chart.defaults.font.family = 'Inter';
-
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Peso Máximo (kg)',
-                            data: maxWeightPoints,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                            borderWidth: 3,
-                            pointBackgroundColor: '#3b82f6',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 5,
-                            pointHoverRadius: 7,
-                            fill: true,
-                            tension: 0.3
-                        },
-                        {
-                            label: 'Peso Promedio (kg)',
-                            data: avgWeightPoints,
-                            borderColor: '#10b981',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            borderDash: [5, 4],
-                            pointBackgroundColor: '#10b981',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            fill: false,
-                            tension: 0.3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { 
-                            display: true,
-                            labels: { color: '#9ca3af', boxWidth: 12, usePointStyle: true }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(30, 30, 30, 0.9)',
-                            titleFont: { size: 13 },
-                            bodyFont: { size: 13, weight: 'bold' },
-                            padding: 12,
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.parsed.y} kg`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { callback: v => v + ' kg' }
-                        },
-                        x: { grid: { display: false } }
-                    }
-
-                }
-            });
-        }
-
-        function generateSuggestions() {
-            const grid = document.getElementById('suggestionsGrid');
-            grid.innerHTML = ''; 
-
-            const muscles = ['Pecho', 'Espalda', 'Hombro', 'Pierna', 'Bicep', 'Tricep'];
-            
-            muscles.forEach(muscle => {
-                let lastExercise = null;
-                let lastDate = null;
-                
-                const sortedData = [...gymData].sort((a, b) => new Date(b.date) - new Date(a.date));
-                
-                for (let session of sortedData) {
-                    const ex = session.exercises.find(e => e.muscle === muscle);
-                    if (ex) {
-                        lastExercise = ex;
-                        lastDate = session.date;
-                        break;
-                    }
-                }
-
-                if (lastExercise) {
-                    let maxWeight = 0;
-                    let repsAtMax = 0;
-
-                    lastExercise.sets.forEach(set => {
-                        // El motor unificado evalúa todo en KG para las reglas de progresión
-                        const convertedW = convertToKg(set.weight, set.unit);
-                        if (convertedW > maxWeight) {
-                            maxWeight = convertedW;
-                            repsAtMax = set.reps;
-                        } else if (convertedW === maxWeight && set.reps > repsAtMax) {
-                            repsAtMax = set.reps;
-                        }
-                    });
-
-                    let suggestionText = "";
-                    let suggestionColor = "text-accent";
-                    let icon = "ph-trend-up";
-
-                    // Reglas de hipertrofia analizadas en KG
-                    const increment = 2.5; 
-                    const maxWeightRounded = parseFloat(maxWeight.toFixed(1));
-
-                    if (repsAtMax >= 10) {
-                        suggestionText = `¡Dominado! Intenta subir a <b>${maxWeightRounded + increment} kg</b> (o su equivalente en lbs). Apunta a 6-8 reps.`;
-                    } else if (repsAtMax >= 7 && repsAtMax < 10) {
-                        suggestionText = `Buen volumen. Intenta sacar <b>10 reps</b> con ${maxWeightRounded} kg antes de subir de peso.`;
-                        suggestionColor = "text-primary";
-                        icon = "ph-arrows-left-right";
-                    } else {
-                        suggestionText = `Carga pesada. Mantén <b>${maxWeightRounded} kg</b> y enfócate en la técnica hasta lograr 8 reps limpias.`;
-                        suggestionColor = "text-yellow-500";
-                        icon = "ph-shield-check";
-                    }
-
-                    const card = document.createElement('div');
-                    card.className = "glass-card rounded-xl p-5 border border-gray-800 hover:border-gray-600 transition-colors";
-                    card.innerHTML = `
-                        <div class="flex justify-between items-start mb-3">
-                            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">${muscle}</span>
-                            <i class="ph ${icon} ${suggestionColor} text-xl"></i>
-                        </div>
-                        <h4 class="text-lg font-bold text-white mb-1 truncate" title="${lastExercise.name}">${lastExercise.name}</h4>
-                        <p class="text-sm text-gray-400 mb-4">Última vez (Eq. a KG): ${maxWeightRounded} kg x ${repsAtMax} reps</p>
-                        <div class="bg-darker p-3 rounded-lg border border-gray-800">
-                            <p class="text-sm text-gray-300 leading-relaxed">${suggestionText}</p>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                }
-            });
-        }
-
-        function renderHistory() {
-            const list = document.getElementById('historyList');
-            list.innerHTML = '';
-            
-            const normalize = str => str ? str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
-            
-            const searchQuery = normalize(document.getElementById('historySearch')?.value || '');
-            const muscleFilter = normalize(document.getElementById('historyFilterMuscle')?.value || '');
-            let filteredSessionsCount = 0;
-
-            const sortedData = [...gymData].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            sortedData.forEach(session => {
-                let hasVisibleExercises = false;
-
-                const dateObj = new Date(session.date);
-                dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
-                const formattedDate = dateObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                
-                let exercisesHTML = session.exercises.map((ex, index) => {
-                    const exNameNorm = normalize(ex.name);
-                    const exMuscleNorm = normalize(ex.muscle);
-
-                    if (muscleFilter && !exMuscleNorm.includes(muscleFilter)) return '';
-                    if (searchQuery && !(exNameNorm.includes(searchQuery) || exMuscleNorm.includes(searchQuery))) return '';
-                    hasVisibleExercises = true;
-
-                    let setsStr = '';
-                    ex.sets.forEach(s => {
-                        if(s.isDropSet) {
-                            setsStr += ` <span class="text-accent text-xs">↘ ${s.reps}x${formatDisplayWeight(s.weight, s.unit)}</span>`;
-                        } else {
-                            setsStr += (setsStr ? ' | ' : '') + `${s.reps}x${formatDisplayWeight(s.weight, s.unit)}`;
-                        }
-                    });
-                    let noteHtml = ex.note ? `<div class="mt-2 text-xs text-gray-400 bg-gray-800/50 p-2 rounded-lg border border-gray-700/50 flex items-start"><i class="ph ph-note-pencil mr-1.5 mt-0.5 text-primary"></i><span>${ex.note}</span></div>` : '';
-                    return `
-                        <div class="py-3 border-b border-gray-800 last:border-0 group relative">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <span class="text-xs text-primary font-bold mr-2">${index + 1}</span>
-                                    <span class="font-semibold text-gray-200">${ex.name}</span>
-                                    <span class="text-xs ml-2 px-2 py-0.5 bg-gray-800 text-gray-400 rounded-full">${ex.muscle}</span>
-                                </div>
-                                <div class="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                    <button onclick="openEditExercise('${session.date}', ${index})" class="text-gray-400 hover:text-blue-400 transition-colors p-1" title="Editar"><i class="ph ph-pencil-simple text-lg"></i></button>
-                                    <button onclick="deleteExercise('${session.date}', ${index})" class="text-gray-400 hover:text-red-400 transition-colors p-1" title="Eliminar"><i class="ph ph-trash text-lg"></i></button>
-                                </div>
-                            </div>
-                            <div class="text-sm text-gray-400 mt-1 ml-6 font-mono">${setsStr}</div>
-                            ${noteHtml ? `<div class="ml-6">${noteHtml}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
-
-                if (!hasVisibleExercises) return;
-                filteredSessionsCount++;
-
-                const displayTime = session.duration ? (String(session.duration).includes(':') ? session.duration : session.duration + ' min') : 'Añadir tiempo';
-                const durationBadge = `<button onclick="editDuration('${session.date}')" class="text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors flex items-center border border-gray-700 shadow-sm"><i class="ph ph-timer mr-1.5 text-primary"></i> ${displayTime}</button>`;
-                
-                const card = document.createElement('div');
-                card.className = "glass-card rounded-xl p-5 shadow-lg border border-gray-800 mb-6 group/session";
-                card.innerHTML = `
-                    <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-lg font-bold capitalize text-white flex items-center">
-                                <i class="ph ph-calendar-blank mr-2 text-gray-400"></i> ${formattedDate}
-                            </h3>
-                            <button onclick="openEditDateModal('${session.date}')" class="opacity-100 md:opacity-0 md:group-hover/session:opacity-100 text-gray-400 hover:text-blue-400 transition-all p-1.5 bg-gray-800/50 hover:bg-gray-800 rounded-lg ml-1" title="Cambiar fecha">
-                                <i class="ph ph-pencil-simple text-sm"></i>
-                            </button>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            ${durationBadge}
-                        </div>
-                    </div>
-                    <div class="bg-darker rounded-lg px-4 border border-gray-800">
-                        ${exercisesHTML}
-                    </div>
-                    <div class="mt-4 flex justify-end">
-                        <button onclick="addExerciseToDate('${session.date}')" class="text-sm font-semibold text-primary hover:text-blue-400 flex items-center transition-colors px-3 py-1.5 bg-primary/10 hover:bg-primary/20 rounded-lg">
-                            <i class="ph ph-plus-circle mr-1.5 text-lg"></i> Agregar ejercicio a esta sesión
-                        </button>
-                    </div>
-                `;
-                list.appendChild(card);
-            });
-            
-            document.getElementById('totalWorkouts').innerText = (searchQuery || muscleFilter) ? `${filteredSessionsCount} / ${gymData.length}` : gymData.length;
-        }
-
-        // --- LÓGICA DE GESTIÓN DE SESIÓN Y EDICIÓN ---
-        window.addExerciseToDate = function(dateStr) {
-            switchTab('dashboard');
-            document.getElementById('inputDate').value = dateStr;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            showToast("Añadiendo a la sesión: " + dateStr);
-        };
-
-        window.openEditDateModal = function(oldDate) {
-            document.getElementById('editDateOldValue').value = oldDate;
-            document.getElementById('editDateInput').value = oldDate;
-            document.getElementById('editDateModal').classList.remove('hidden');
-        };
-
-        window.closeEditDateModal = function() {
-            document.getElementById('editDateModal').classList.add('hidden');
-        };
-
-        window.saveEditDate = async function() {
-            const oldDate = document.getElementById('editDateOldValue').value;
-            const newDate = document.getElementById('editDateInput').value;
-            
-            if(!newDate || oldDate === newDate) {
-                closeEditDateModal();
-                return;
-            }
-
-            const oldSessionIndex = gymData.findIndex(s => s.date === oldDate);
-            if (oldSessionIndex === -1) return;
-
-            const existingSessionIndex = gymData.findIndex(s => s.date === newDate);
-
-            if (existingSessionIndex !== -1) {
-                if(!confirm(`Ya existe una sesión el ${newDate}. ¿Deseas fusionar todos los ejercicios de ${oldDate} hacia ${newDate}?`)) return;
-                
-                // Mover ejercicios
-                gymData[existingSessionIndex].exercises.push(...gymData[oldSessionIndex].exercises);
-                
-                // Conservar duración si la nueva no tiene
-                if (!gymData[existingSessionIndex].duration && gymData[oldSessionIndex].duration) {
-                    gymData[existingSessionIndex].duration = gymData[oldSessionIndex].duration;
-                }
-                
-                // Borrar la sesión vieja
-                gymData.splice(oldSessionIndex, 1);
-            } else {
-                // Simplemente actualizar la fecha
-                gymData[oldSessionIndex].date = newDate;
-            }
-
-            // Debido a que cambiamos el Primary Key (date) de Supabase o fusionamos,
-            // primero forzamos el borrado del registro antiguo en DB
-            if (window.deleteSessionFromDB) {
-                await window.deleteSessionFromDB(oldDate);
-            }
-
-            // Guardamos local y subimos a la nube
-            if(window.saveToDB) window.saveToDB();
-            if(window.refreshUI) window.refreshUI();
-            
-            closeEditDateModal();
-            showToast("📅 Fecha actualizada");
-        };
-
-        window.deleteExercise = async function(date, index) {
-            if(!confirm("¿Estás seguro de que quieres eliminar este ejercicio de tu historial?")) return;
-            
-            let sessionIndex = gymData.findIndex(s => s.date === date);
-            if(sessionIndex > -1) {
-                gymData[sessionIndex].exercises.splice(index, 1);
-                
-                // Si el día quedó vacío, eliminamos la sesión entera
-                if(gymData[sessionIndex].exercises.length === 0) {
-                    gymData.splice(sessionIndex, 1);
-                    if(window.deleteSessionFromDB) {
-                        await window.deleteSessionFromDB(date);
-                    }
-                } else {
-                    // Si aún quedan ejercicios ese día, actualizamos solo esa fila
-                    if(window.saveSingleSessionToDB) {
-                        await window.saveSingleSessionToDB(gymData[sessionIndex]);
-                    }
-                }
-                
-                localStorage.setItem('hypertrack_gymData', JSON.stringify(gymData));
-                if(window.refreshUI) window.refreshUI();
-                showToast("🗑️ Registro eliminado");
-            }
-        };
-
-        let editCurrentDate = null;
-        let editCurrentIndex = null;
-
-        window.openEditExercise = function(date, index) {
-            editCurrentDate = date;
-            editCurrentIndex = index;
-            const session = gymData.find(s => s.date === date);
-            const ex = session.exercises[index];
-            
-            let setsHtml = '';
-            let currentGroup = 0;
-            ex.sets.forEach((s, i) => {
-                if(!s.isDropSet) {
-                    currentGroup++;
-                    setsHtml += `
-                    <div class="set-group mb-2 border-b border-gray-800/50 pb-2">
-                        <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
-                            <span class="text-gray-500 font-bold w-6 edit-set-number">#${currentGroup}</span>
-                            <div class="flex-1">
-                                <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
-                            </div>
-                            <span class="text-gray-500">x</span>
-                            <div class="flex-[1.2] relative flex min-w-0">
-                                <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
-                                <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
-                                    <option value="kg" ${s.unit==='kg'?'selected':''}>kg</option>
-                                    <option value="lbs" ${s.unit==='lbs'?'selected':''}>lbs</option>
-                                </select>
-                            </div>
-                            <button type="button" onclick="this.closest('.set-group').remove(); window.recalcEditSets()" class="text-gray-600 hover:text-red-400 p-1 ml-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
-                        </div>
-                        <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3">
-                    `;
-                } else {
-                    setsHtml += `
-                            <div class="flex items-center gap-2 edit-set-row drop-set">
-                                <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-                                <div class="flex-1 min-w-0">
-                                    <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
-                                </div>
-                                <span class="text-gray-500 text-xs">x</span>
-                                <div class="flex-[1.2] relative flex min-w-0">
-                                    <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
-                                    <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
-                                        <option value="kg" ${s.unit==='kg'?'selected':''}>kg</option>
-                                        <option value="lbs" ${s.unit==='lbs'?'selected':''}>lbs</option>
-                                    </select>
-                                </div>
-                                <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
-                            </div>
-                    `;
-                }
-                
-                const nextItem = ex.sets[i+1];
-                if (!nextItem || !nextItem.isDropSet) {
-                    setsHtml += `
-                        </div>
-                        <button type="button" onclick="addEditDropSet(this)" class="text-xs text-accent mt-1 ml-3"><i class="ph ph-plus"></i> Drop Set</button>
-                    </div>
-                    `;
-                }
-            });
-
-            document.getElementById('editModalContent').innerHTML = `
-                <div class="mb-4 pb-3 border-b border-gray-800">
-                    <input type="text" id="editExerciseName" value="${ex.name}" class="w-full bg-transparent text-primary font-bold text-lg outline-none border-b border-dashed border-primary/50 focus:border-primary focus:bg-gray-800/50 p-1 mb-1 rounded transition-colors">
-                    <p class="text-gray-400 text-xs uppercase tracking-wider pl-1">${date} • ${ex.muscle}</p>
-                </div>
-                <div id="editSetsContainer">${setsHtml}</div>
-                <button type="button" onclick="addEditSetRow()" class="text-primary text-sm font-medium hover:text-blue-400 mt-2 flex items-center mb-4">
-                    <i class="ph ph-plus-bold mr-1"></i> Añadir Serie
-                </button>
-                <div class="mt-4 pt-4 border-t border-gray-800">
-                    <label class="block text-xs text-gray-400 mb-2">Notas (Opcional)</label>
-                    <textarea id="editNote" rows="2" placeholder="Alguna observación sobre este ejercicio..." class="w-full bg-dark border border-gray-700 rounded-lg p-3 text-white text-sm outline-none focus:border-primary resize-none">${ex.note || ''}</textarea>
-                </div>
-            `;
-            document.getElementById('editExerciseModal').classList.remove('hidden');
-        }
-
-        window.recalcEditSets = function() {
-            const container = document.getElementById('editSetsContainer');
-            if(container) {
-                const numbers = container.querySelectorAll('.edit-set-number');
-                numbers.forEach((span, idx) => {
-                    span.innerText = '#' + (idx + 1);
-                });
-            }
-        };
-
-        window.addEditSetRow = function() {
-            const container = document.getElementById('editSetsContainer');
-            const rowCount = container.querySelectorAll('.set-group').length + 1;
-            const div = document.createElement('div');
-            div.className = "set-group mb-2 border-b border-gray-800/50 pb-2";
-            div.innerHTML = `
-                <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
-                    <span class="text-gray-500 font-bold w-6 edit-set-number">#${rowCount}</span>
-                    <div class="flex-1 min-w-0">
-                        <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
-                    </div>
-                    <span class="text-gray-500">x</span>
-                    <div class="flex-[1.2] relative flex min-w-0">
-                        <input type="number" step="0.1" value="" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
-                        <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
-                            <option value="kg">kg</option>
-                            <option value="lbs">lbs</option>
-                        </select>
-                    </div>
-                    <button type="button" onclick="this.closest('.set-group').remove(); window.recalcEditSets()" class="text-gray-600 hover:text-red-400 p-1 ml-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
-                </div>
-                <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
-                <button type="button" onclick="addEditDropSet(this)" class="text-xs text-accent mt-1 ml-3"><i class="ph ph-plus"></i> Drop Set</button>
-            `;
-            container.appendChild(div);
-        }
-
-        window.addEditDropSet = function(btn) {
-            const container = btn.parentElement.querySelector('.drop-sets-container');
-            container.classList.remove('hidden');
-            const dropDiv = document.createElement('div');
-            dropDiv.className = "flex items-center gap-2 edit-set-row drop-set mb-2";
-            dropDiv.innerHTML = `
-                <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-                <div class="flex-1 min-w-0">
-                    <input type="number" value="" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
-                </div>
-                <span class="text-gray-500 text-xs">x</span>
-                <div class="flex-[1.2] relative flex min-w-0">
-                    <input type="number" step="0.1" value="" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
-                    <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
-                        <option value="kg">kg</option>
-                        <option value="lbs">lbs</option>
-                    </select>
-                </div>
-                <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
-            `;
-            container.appendChild(dropDiv);
-        }
-
-        window.closeEditModal = function() {
-            document.getElementById('editExerciseModal').classList.add('hidden');
-        }
-
-        window.saveEditExercise = function() {
-            const session = gymData.find(s => s.date === editCurrentDate);
-            if(!session) return;
-            const ex = session.exercises[editCurrentIndex];
-            
-            const groups = document.querySelectorAll('#editSetsContainer .set-group');
-            let newSets = [];
-            groups.forEach(group => {
-                const mainRow = group.querySelector('.main-set');
-                if (mainRow) {
-                    const r = mainRow.querySelector('.edit-reps').value;
-                    const w = mainRow.querySelector('.edit-weight').value;
-                    const u = mainRow.querySelector('.edit-unit').value;
-                    if(r && w) {
-                        newSets.push({ reps: parseInt(r), weight: parseFloat(w), unit: u, isDropSet: false });
-                    }
-                }
-                const dropRows = group.querySelectorAll('.drop-set');
-                dropRows.forEach(dropRow => {
-                    const r = dropRow.querySelector('.edit-reps').value;
-                    const w = dropRow.querySelector('.edit-weight').value;
-                    const u = dropRow.querySelector('.edit-unit').value;
-                    if(r && w) {
-                        newSets.push({ reps: parseInt(r), weight: parseFloat(w), unit: u, isDropSet: true });
-                    }
-                });
-            });
-            
-            const noteInput = document.getElementById('editNote');
-            const nameInput = document.getElementById('editExerciseName');
-            
-            if(newSets.length > 0) {
-                ex.sets = newSets;
-                if(noteInput) ex.note = noteInput.value;
-                if(nameInput && nameInput.value.trim() !== '') ex.name = nameInput.value.trim();
-                
-                if(window.saveToDB) window.saveToDB();
-                if(window.refreshUI) window.refreshUI();
-                closeEditModal();
-                showToast("✏️ Registro actualizado");
-            } else {
-                alert("Debes tener al menos una serie válida.");
-            }
-        }
-
-        document.getElementById('inputDate').valueAsDate = new Date();
-
-        window.recalcSets = function() {
-            const container = document.getElementById('setsContainer');
-            if(container) {
-                const numbers = container.querySelectorAll('.set-number');
-                numbers.forEach((span, idx) => {
-                    span.innerText = '#' + (idx + 1);
-                });
-            }
-        };
-
-        function addSetRow() {
-            const container = document.getElementById('setsContainer');
-            const rowCount = container.querySelectorAll('.set-group').length + 1;
-            const div = document.createElement('div');
-            div.className = "set-group mb-2";
-            div.innerHTML = `
-                <div class="flex items-center gap-2 md:gap-3 set-row main-set">
-                    <span class="text-gray-500 font-bold w-6 set-number">#${rowCount}</span>
-                    <div class="flex-1 min-w-0">
-                        <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
-                    </div>
-                    <span class="text-gray-500">x</span>
-                    <div class="flex-[1.2] relative flex min-w-0">
-                        <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
-                        <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
-                            <option value="kg">kg</option>
-                            <option value="lbs">lbs</option>
-                        </select>
-                    </div>
-                    <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
-                    <button type="button" onclick="this.closest('.set-group').remove(); window.recalcSets()" class="text-gray-600 hover:text-red-400 p-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
-                </div>
-                <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
-            `;
-            container.appendChild(div);
-        }
-
-        window.addDropSet = function(btn) {
-            const group = btn.closest('.set-group');
-            const container = group.querySelector('.drop-sets-container');
-            container.classList.remove('hidden');
-            
-            const dropDiv = document.createElement('div');
-            dropDiv.className = "flex items-center gap-2 md:gap-3 set-row drop-set";
-            dropDiv.innerHTML = `
-                <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-                <div class="flex-1 min-w-0">
-                    <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2.5 text-white text-sm focus:border-accent outline-none reps-input">
-                </div>
-                <span class="text-gray-500 text-xs">x</span>
-                <div class="flex-[1.2] relative flex min-w-0">
-                    <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-accent outline-none weight-input">
-                    <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-accent unit-select">
-                        <option value="kg">kg</option>
-                        <option value="lbs">lbs</option>
-                    </select>
-                </div>
-                <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
-            `;
-            container.appendChild(dropDiv);
-        }
-
-        // --- ASISTENTE GHOST ---
-        let ghostSetsData = null;
-        
-        function normalizeExerciseName(name) {
-            return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-        }
-
-        document.getElementById('inputName').addEventListener('input', (e) => checkGhostData(e.target.value));
-
-        function checkGhostData(name) {
-            if (!name || name.trim() === '') {
-                document.getElementById('ghostHistoryCard').classList.add('hidden');
-                return;
-            }
-            
-            const searchName = normalizeExerciseName(name);
-            const sortedData = [...gymData].sort((a,b) => new Date(b.date) - new Date(a.date));
-            
-            let foundEx = null;
-            let foundDate = null;
-
-            for (const session of sortedData) {
-                const ex = session.exercises.find(e => normalizeExerciseName(e.name) === searchName);
-                if (ex) {
-                    foundEx = ex;
-                    foundDate = session.date;
-                    break;
-                }
-            }
-
-            if (foundEx) {
-                ghostSetsData = JSON.parse(JSON.stringify(foundEx.sets));
-                
-                const daysAgo = Math.floor((new Date() - new Date(foundDate)) / (1000 * 60 * 60 * 24));
-                const dateObj = new Date(foundDate);
-                dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
-                const dateStr = dateObj.toLocaleDateString('es-ES');
-                
-                document.getElementById('ghostDateText').innerText = `Hace ${daysAgo} días (${dateStr})`;
-                
-                let setsStrs = foundEx.sets.map(s => `${s.reps}x${s.weight}${s.unit}${s.isDropSet?'(DS)':''}`);
-                document.getElementById('ghostSetsText').innerText = setsStrs.join(', ');
-                
-                let maxW = 0, maxR = 0;
-                foundEx.sets.forEach(s => {
-                    if (s.weight > maxW) { maxW = s.weight; maxR = s.reps; }
-                });
-                document.getElementById('ghostMaxText').innerText = `${maxW} kg x ${maxR}`;
-                
-                document.getElementById('ghostHistoryCard').classList.remove('hidden');
-            } else {
-                document.getElementById('ghostHistoryCard').classList.add('hidden');
-                ghostSetsData = null;
-            }
-        }
-
-        window.copyGhostSets = function() {
-            if (!ghostSetsData) return;
-            
-            const container = document.getElementById('setsContainer');
-            container.innerHTML = '';
-            
-            ghostSetsData.forEach((s) => {
-                if (!s.isDropSet) {
-                    addSetRow();
-                    const rows = container.querySelectorAll('.set-group');
-                    const lastRow = rows[rows.length - 1];
-                    lastRow.querySelector('.weight-input').value = s.weight;
-                    lastRow.querySelector('.unit-select').value = s.unit;
-                    const repsInput = lastRow.querySelector('.reps-input');
-                    repsInput.value = '';
-                    repsInput.placeholder = s.reps;
-                } else {
-                    const rows = container.querySelectorAll('.set-group');
-                    if(rows.length === 0) return;
-                    const lastRow = rows[rows.length - 1];
-                    const dsBtn = lastRow.querySelector('button[title="Añadir Drop Set"]');
-                    if(dsBtn) {
-                        addDropSet(dsBtn);
-                        const dsContainer = lastRow.querySelector('.drop-sets-container');
-                        const dsRows = dsContainer.querySelectorAll('.drop-set');
-                        const lastDsRow = dsRows[dsRows.length - 1];
-                        lastDsRow.querySelector('.weight-input').value = s.weight;
-                        lastDsRow.querySelector('.unit-select').value = s.unit;
-                        const repsInput = lastDsRow.querySelector('.reps-input');
-                        repsInput.value = '';
-                        repsInput.placeholder = s.reps;
-                    }
-                }
-            });
-            window.recalcSets();
-            showToast("Pesos copiados. ¡A superarlos!");
-        };
-
-        // --- FLUJO DE SESIÓN DE ENTRENAMIENTO ---
-        let activeWorkout = null;
-        let workoutTimerInterval = null;
-
-        function initWorkoutState() {
-            const saved = localStorage.getItem('hypertrack_active_workout');
-            if (saved) {
-                try {
-                    activeWorkout = JSON.parse(saved);
-                    startWorkoutTimerUI();
-                    renderActiveWorkoutList();
-                } catch(e) {
-                    activeWorkout = null;
-                }
-            }
-            updateWorkoutUI();
-            initRestTimer();
-        }
-
-        function updateWorkoutUI() {
-            const startPanel = document.getElementById('startWorkoutPanel');
-            const activePanel = document.getElementById('activeWorkoutPanel');
-            if (activeWorkout) {
-                if(startPanel) startPanel.classList.add('hidden');
-                if(activePanel) activePanel.classList.remove('hidden');
-            } else {
-                if(startPanel) startPanel.classList.remove('hidden');
-                if(activePanel) activePanel.classList.add('hidden');
-                if(workoutTimerInterval) clearInterval(workoutTimerInterval);
-            }
-        }
-
-        window.startWorkout = function() {
-            if (activeWorkout) return;
-            activeWorkout = {
-                startTime: Date.now(),
-                date: document.getElementById('inputDate').value,
-                exercises: []
-            };
-            localStorage.setItem('hypertrack_active_workout', JSON.stringify(activeWorkout));
-            startWorkoutTimerUI();
-            updateWorkoutUI();
-            showToast("💪 ¡Entrenamiento iniciado!");
-        };
-
-        function startWorkoutTimerUI() {
-            if(workoutTimerInterval) clearInterval(workoutTimerInterval);
-            
-            const display = document.getElementById('workoutTimerDisplay');
-            if(!display) return;
-            
-            const updateTimer = () => {
-                if(!activeWorkout) return;
-                const diff = Math.floor((Date.now() - activeWorkout.startTime) / 1000);
-                const h = String(Math.floor(diff / 3600)).padStart(2, '0');
-                const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-                const s = String(diff % 60).padStart(2, '0');
-                display.innerText = h === "00" ? `${m}:${s}` : `${h}:${m}:${s}`;
-            };
-            
-            updateTimer();
-            workoutTimerInterval = setInterval(updateTimer, 1000);
-        }
-
-        // --- REST TIMER ---
-        let restTimerEndTime = null;
-        let restTimerInterval = null;
-
-        function initRestTimer() {
-            const savedRest = localStorage.getItem('hypertrack_rest_timer');
-            if (savedRest) {
-                restTimerEndTime = parseInt(savedRest);
-                if (restTimerEndTime > Date.now()) {
-                    updateRestTimerUI();
-                    restTimerInterval = setInterval(updateRestTimerUI, 1000);
-                } else {
-                    stopRestTimer();
-                }
-            }
-        }
-
-        window.startRestTimer = function(seconds) {
-            if(restTimerInterval) clearInterval(restTimerInterval);
-            restTimerEndTime = Date.now() + (seconds * 1000);
-            localStorage.setItem('hypertrack_rest_timer', restTimerEndTime.toString());
-            updateRestTimerUI();
-            restTimerInterval = setInterval(updateRestTimerUI, 1000);
-        };
-
-        window.stopRestTimer = function() {
-            if(restTimerInterval) clearInterval(restTimerInterval);
-            restTimerEndTime = null;
-            localStorage.removeItem('hypertrack_rest_timer');
-            const display = document.getElementById('restTimerDisplay');
-            if(display) {
-                display.innerText = "00:00";
-                display.classList.remove('text-red-400', 'animate-pulse', 'text-accent');
-                display.classList.add('text-gray-500');
-            }
-        };
-
-        function updateRestTimerUI() {
-            if(!restTimerEndTime) return;
-            const display = document.getElementById('restTimerDisplay');
-            if(!display) return;
-
-            const diff = Math.floor((restTimerEndTime - Date.now()) / 1000);
-            
-            if (diff <= 0) {
-                display.innerText = "00:00";
-                display.classList.remove('text-gray-500', 'text-accent');
-                display.classList.add('text-red-400', 'animate-pulse');
-                clearInterval(restTimerInterval);
-                localStorage.removeItem('hypertrack_rest_timer');
-            } else {
-                display.classList.remove('text-gray-500', 'text-red-400', 'animate-pulse');
-                display.classList.add('text-accent');
-                const m = String(Math.floor(diff / 60)).padStart(2, '0');
-                const s = String(diff % 60).padStart(2, '0');
-                display.innerText = `${m}:${s}`;
-            }
-        }
-
-        function renderActiveWorkoutList() {
-            const list = document.getElementById('activeWorkoutList');
-            if(!list) return;
-            
-            if(!activeWorkout || activeWorkout.exercises.length === 0) {
-                list.classList.add('hidden');
-                return;
-            }
-            list.classList.remove('hidden');
-            list.innerHTML = activeWorkout.exercises.map((ex, idx) => {
-                let setsStr = ex.sets.map(s => `${s.reps}x${s.weight}${s.unit}`).join(', ');
-                return `
-                    <div class="flex justify-between items-center bg-dark p-2 rounded-lg border border-gray-700">
-                        <div>
-                            <p class="text-sm font-bold text-gray-200">${ex.name} <span class="text-[10px] text-gray-500 bg-gray-800 px-1 py-0.5 rounded ml-1 uppercase">${ex.muscle}</span></p>
-                            <p class="text-xs text-gray-400 font-mono mt-0.5">${setsStr}</p>
-                        </div>
-                        <button type="button" onclick="removeActiveExercise(${idx})" class="text-gray-500 hover:text-red-400 p-2" title="Eliminar Ejercicio"><i class="ph ph-trash text-lg"></i></button>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        window.removeActiveExercise = function(idx) {
-            if(!activeWorkout) return;
-            activeWorkout.exercises.splice(idx, 1);
-            localStorage.setItem('hypertrack_active_workout', JSON.stringify(activeWorkout));
-            renderActiveWorkoutList();
-        };
-
-        window.finishWorkout = function() {
-            if(!activeWorkout) return;
-            if(activeWorkout.exercises.length === 0) {
-                if(confirm("No has añadido ejercicios. ¿Cancelar entrenamiento?")) {
-                    activeWorkout = null;
-                    localStorage.removeItem('hypertrack_active_workout');
-                    stopRestTimer();
-                    updateWorkoutUI();
-                }
-                return;
-            }
-
-            const diff = Math.floor((Date.now() - activeWorkout.startTime) / 1000);
-            const h = String(Math.floor(diff / 3600)).padStart(2, '0');
-            const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-            const s = String(diff % 60).padStart(2, '0');
-            const durationStr = h === '00' ? `${m}:${s}` : `${h}:${m}:${s}`;
-
-            const date = activeWorkout.date;
-            
-            let sessionIndex = gymData.findIndex(s => s.date === date);
-            if (sessionIndex > -1) {
-                gymData[sessionIndex].exercises.push(...activeWorkout.exercises);
-                if(!gymData[sessionIndex].duration) gymData[sessionIndex].duration = durationStr;
-            } else {
-                gymData.push({
-                    date: date,
-                    duration: durationStr,
-                    exercises: activeWorkout.exercises
-                });
-            }
-
-            if(window.saveToDB) window.saveToDB();
-            
-            activeWorkout = null;
-            localStorage.removeItem('hypertrack_active_workout');
-            if(workoutTimerInterval) clearInterval(workoutTimerInterval);
-            
-            stopRestTimer();
-            updateWorkoutUI();
-            
-            const list = document.getElementById('activeWorkoutList');
-            if(list) list.innerHTML = '';
-            
-            if(window.refreshUI) window.refreshUI();
-            switchTab('history');
-            showToast("✅ Entrenamiento Finalizado y Guardado");
-        };
-
-        function handleAddSubmit(e) {
-            e.preventDefault();
-            
-            if (!activeWorkout) {
-                startWorkout();
-            }
-            
-            const date = document.getElementById('inputDate').value;
-            const muscle = document.getElementById('inputMuscle').value;
-            const name = document.getElementById('inputName').value.trim();
-            const note = document.getElementById('inputNote') ? document.getElementById('inputNote').value.trim() : '';
-            
-            const sets = [];
-            document.querySelectorAll('.set-group').forEach(group => {
-                const mainRow = group.querySelector('.main-set');
-                if (mainRow) {
-                    const r = parseInt(mainRow.querySelector('.reps-input').value);
-                    const w = parseFloat(mainRow.querySelector('.weight-input').value);
-                    const u = mainRow.querySelector('.unit-select').value;
-                    if(!isNaN(r) && !isNaN(w)) sets.push({ reps: r, weight: w, unit: u, isDropSet: false });
-                }
-                const dropRows = group.querySelectorAll('.drop-set');
-                dropRows.forEach(dropRow => {
-                    const r = parseInt(dropRow.querySelector('.reps-input').value);
-                    const w = parseFloat(dropRow.querySelector('.weight-input').value);
-                    const u = dropRow.querySelector('.unit-select').value;
-                    if(!isNaN(r) && !isNaN(w)) sets.push({ reps: r, weight: w, unit: u, isDropSet: true });
-                });
-            });
-
-            const exData = { name, muscle, sets };
-            if(note) exData.note = note;
-
-            activeWorkout.exercises.push(exData);
-            activeWorkout.date = date; // Force update to chosen date
-            localStorage.setItem('hypertrack_active_workout', JSON.stringify(activeWorkout));
-            
-            renderActiveWorkoutList();
-
-            document.getElementById('inputName').value = '';
-            if (document.getElementById('inputNote')) document.getElementById('inputNote').value = '';
-            
-            document.getElementById('setsContainer').innerHTML = `
-                <div class="set-group mb-2">
-                    <div class="flex items-center gap-2 md:gap-3 set-row main-set">
-                        <span class="text-gray-500 font-bold w-6 set-number">#1</span>
-                        <div class="flex-1 min-w-0">
-                            <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
-                        </div>
-                        <span class="text-gray-500">x</span>
-                        <div class="flex-[1.2] relative flex min-w-0">
-                            <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
-                            <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
-                                <option value="kg">kg</option>
-                                <option value="lbs">lbs</option>
-                            </select>
-                        </div>
-                        <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
-                        <button type="button" onclick="this.closest('.set-group').remove(); window.recalcSets()" class="text-gray-600 hover:text-red-400 p-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
-                    </div>
-                    <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
-                </div>
-            `;
-            
-            document.getElementById('ghostHistoryCard').classList.add('hidden');
-            ghostSetsData = null;
-            
-            showToast("Ejercicio añadido al entrenamiento actual");
-        }
-
-        function exportExcel() {
-            let rows = [];
-            
-            // Aplanar la estructura JSON para Excel
-            gymData.forEach(session => {
-                session.exercises.forEach(ex => {
-                    ex.sets.forEach((set, i) => {
-                        rows.push({
-                            'Fecha': session.date,
-                            'Tiempo': session.duration || '',
-                            'Grupo Muscular': ex.muscle,
-                            'Ejercicio': ex.name,
-                            'Serie': i + 1,
-                            'Repeticiones': set.reps,
-                            'Peso': set.weight,
-                            'Unidad': (set.unit || 'kg').toLowerCase(),
-                            'Es Drop Set': set.isDropSet ? 'Sí' : 'No',
-                            'Notas': ex.note || ''
-                        });
-                    });
-                });
-            });
-
-            if(rows.length === 0) {
-                showModal("Sin datos", "No hay registros en tu historial para exportar.");
-                return;
-            }
-
-            // Crear libro y hoja con SheetJS
-            const worksheet = XLSX.utils.json_to_sheet(rows);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Historial Gym");
-            
-            // Descargar
-            XLSX.writeFile(workbook, "HyperTrack_Historial.xlsx");
-            showToast("Historial descargado a Excel");
-        }
-
-        function handleImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    // Asumimos que los datos están en la primera hoja
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet);
-
-                    let importedData = {}; 
-                    let recordsAdded = 0;
-
-                    json.forEach(row => {
-                        // Tolerar variaciones comunes de los nombres de columnas
-                        const repsField = row['Repeticiones'] !== undefined ? row['Repeticiones'] : row['Repeticion'];
-                        const weightField = row['Peso'] !== undefined ? row['Peso'] : row['Pesos'];
-                        const dropSetField = row['Es Drop Set'] || row['Es DropSet'] || row['Drop Set'] || 'No';
-
-                        // Validar campos mínimos
-                        if(!row['Ejercicio'] || repsField === undefined || weightField === undefined) return;
-
-                        let dateStr = row['Fecha'];
-                        
-                        // Parseo robusto de fecha de Excel a String YYYY-MM-DD
-                        if(typeof dateStr === 'number') {
-                            const excelEpoch = new Date(1899, 11, 30); // Base de Excel
-                            const jsDate = new Date(excelEpoch.getTime() + dateStr * 86400000);
-                            dateStr = jsDate.toISOString().split('T')[0];
-                        } else if (dateStr) {
-                            const d = new Date(dateStr);
-                            if(!isNaN(d)) dateStr = d.toISOString().split('T')[0];
-                            else dateStr = new Date().toISOString().split('T')[0]; // Fallback a hoy
-                        } else {
-                            dateStr = new Date().toISOString().split('T')[0];
-                        }
-
-                        if(!importedData[dateStr]) importedData[dateStr] = {};
-                        let exName = row['Ejercicio'];
-                        
-                        if(!importedData[dateStr][exName]) {
-                            importedData[dateStr][exName] = {
-                                muscle: row['Grupo Muscular'] || 'Otro',
-                                note: row['Notas'] || row['Nota'] || '',
-                                duration: row['Tiempo'] || row['Tiempo (Duración)'] || row['Duracion'] || '',
-                                sets: []
-                            };
-                        }
-                        
-                        const isDS = String(dropSetField).toLowerCase().trim();
-                        
-                        importedData[dateStr][exName].sets.push({
-                            reps: parseInt(repsField),
-                            weight: parseFloat(weightField),
-                            unit: (row['Unidad'] || 'kg').toLowerCase(),
-                            isDropSet: isDS === 'sí' || isDS === 'si' || isDS === 'true' || isDS === 'yes'
-                        });
-                        recordsAdded++;
-                    });
-
-                    // Mezclar con los datos existentes
-                    for (const [date, exercises] of Object.entries(importedData)) {
-                        let session = gymData.find(s => s.date === date);
-                        if (!session) {
-                            session = { date: date, exercises: [] };
-                            gymData.push(session);
-                        }
-                        
-                        // Set session duration if it was provided
-                        let foundDuration = '';
-                        for (const exData of Object.values(exercises)) {
-                            if (exData.duration) foundDuration = exData.duration;
-                        }
-                        if (foundDuration && !session.duration) {
-                            session.duration = foundDuration;
-                        }
-
-                        for (const [name, exData] of Object.entries(exercises)) {
-                            // Buscar si ya existe el ejercicio ese día para no duplicar series, o agregar como nuevo
-                            let existingEx = session.exercises.find(e => e.name === name);
-                            if(existingEx) {
-                                existingEx.sets.push(...exData.sets);
-                                if (!existingEx.note && exData.note) existingEx.note = exData.note;
-                            } else {
-                                session.exercises.push({
-                                    name: name,
-                                    muscle: exData.muscle,
-                                    note: exData.note,
-                                    sets: exData.sets
-                                });
-                            }
-                        }
-                    }
-                    
-                    showModal("Importación Exitosa", `Se han añadido/mezclado ${recordsAdded} series de entrenamiento a tu base de datos.`);
-                    
-                    // Limpiar el input file
-                    document.getElementById('importExcelFile').value = '';
-                    
-                    // Refrescar
-                    if(window.refreshUI) window.refreshUI();
-                    
-                    if(window.saveToDB) window.saveToDB();
-
-                } catch(error) {
-                    console.error(error);
-                    showModal("Error al importar", "Hubo un problema al leer el Excel. Asegúrate de que las columnas se llamen: Fecha, Tiempo, Grupo Muscular, Ejercicio, Serie, Repeticiones, Peso, Unidad, Notas.");
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        // --- LÓGICA DE RUTINAS Y SUGERENCIAS ---
-        function toggleRoutineView(view) {
-            const btnActive = document.getElementById('btnViewActive');
-            const btnArchived = document.getElementById('btnViewArchived');
-            const viewActive = document.getElementById('viewActiveRoutine');
-            const viewArchived = document.getElementById('viewArchivedRoutine');
-
-            if (view === 'active') {
-                btnActive.className = "px-4 py-2 rounded-md bg-gray-800 text-white font-semibold text-sm transition-colors";
-                btnArchived.className = "px-4 py-2 rounded-md text-gray-400 hover:text-white font-semibold text-sm transition-colors";
-                viewActive.classList.remove('hidden');
-                viewArchived.classList.add('hidden');
-            } else {
-                btnArchived.className = "px-4 py-2 rounded-md bg-gray-800 text-white font-semibold text-sm transition-colors";
-                btnActive.className = "px-4 py-2 rounded-md text-gray-400 hover:text-white font-semibold text-sm transition-colors";
-                viewArchived.classList.remove('hidden');
-                viewActive.classList.add('hidden');
-            }
-        }
-
-        function handleAddRoutine(e) {
-            e.preventDefault();
-            const day = document.getElementById('routineDay').value;
-            const muscle = document.getElementById('routineMuscle').value;
-            const name = document.getElementById('routineName').value;
-
-            window.routineData.active.push({
-                id: Date.now().toString(),
-                day, muscle, name,
-                addedAt: new Date().toISOString()
-            });
-
-            document.getElementById('routineName').value = '';
-            renderRoutine();
-            if (window.saveRoutineToDB) window.saveRoutineToDB();
-            showToast("Ejercicio añadido al plan");
-        }
-
-        function openEditRoutineModal(id) {
-            const ex = window.routineData.active.find(e => e.id === id);
-            if(!ex) return;
-            
-            document.getElementById('editRoutineId').value = ex.id;
-            document.getElementById('editRoutineDay').value = ex.day;
-            document.getElementById('editRoutineMuscle').value = ex.muscle;
-            document.getElementById('editRoutineName').value = ex.name;
-            
-            document.getElementById('editRoutineModal').classList.remove('hidden');
-        }
-
-        function closeEditRoutineModal() {
-            document.getElementById('editRoutineModal').classList.add('hidden');
-        }
-
-        function saveEditRoutine() {
-            const id = document.getElementById('editRoutineId').value;
-            const ex = window.routineData.active.find(e => e.id === id);
-            if(!ex) return;
-            
-            const newDay = document.getElementById('editRoutineDay').value;
-            const newMuscle = document.getElementById('editRoutineMuscle').value;
-            const newName = document.getElementById('editRoutineName').value;
-            
-            if(!newName.trim()) {
-                alert("El nombre del ejercicio no puede estar vacío.");
-                return;
-            }
-            
-            ex.day = newDay;
-            ex.muscle = newMuscle;
-            ex.name = newName.trim();
-            
-            renderRoutine();
-            if (window.saveRoutineToDB) window.saveRoutineToDB();
-            
-            closeEditRoutineModal();
-            showToast("✏️ Ejercicio actualizado");
-        }
-
-        function archiveRoutineExercise(id) {
-            const idx = window.routineData.active.findIndex(ex => ex.id === id);
-            if(idx > -1) {
-                const ex = window.routineData.active.splice(idx, 1)[0];
-                ex.archivedAt = new Date().toISOString();
-                window.routineData.archived.unshift(ex);
-                renderRoutine();
-                if (window.saveRoutineToDB) window.saveRoutineToDB();
-                showToast("Ejercicio archivado");
-            }
-        }
-
-        function deleteRoutineExercise(id) {
-            if(!confirm("¿Eliminar este ejercicio de la rutina permanentemente?")) return;
-            window.routineData.active = window.routineData.active.filter(ex => ex.id !== id);
-            renderRoutine();
-            if (window.saveRoutineToDB) window.saveRoutineToDB();
-            showToast("🗑️ Ejercicio eliminado");
-        }
-
-        function deleteArchivedRoutineExercise(id) {
-            if(!confirm("¿Eliminar este ejercicio del archivo permanentemente?")) return;
-            window.routineData.archived = window.routineData.archived.filter(ex => ex.id !== id);
-            renderRoutine();
-            if (window.saveRoutineToDB) window.saveRoutineToDB();
-            showToast("🗑️ Ejercicio eliminado del archivo");
-        }
-
-
-        function renderRoutine() {
-            // Render Active
-            const container = document.getElementById('routineDaysContainer');
-            if(!container) return;
-            container.innerHTML = '';
-            
-            const daysOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-            
-            daysOrder.forEach(day => {
-                const exercises = window.routineData.active.filter(ex => ex.day === day);
-                if (exercises.length > 0) {
-                    const card = document.createElement('div');
-                    card.className = "bg-darker rounded-xl border border-gray-800 p-4 shadow-sm";
-                    
-                    let exHtml = exercises.map(ex => `
-                        <div class="flex justify-between items-center bg-dark p-2 rounded-lg border border-gray-700 mb-2 last:mb-0">
-                            <div>
-                                <p class="text-sm font-bold text-gray-200">${ex.name}</p>
-                                <p class="text-[10px] uppercase font-bold text-primary tracking-wider">${ex.muscle}</p>
-                            </div>
-                            <div class="flex gap-1">
-                                <button onclick="openEditRoutineModal('${ex.id}')" class="text-gray-500 hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-blue-900/20" title="Editar">
-                                    <i class="ph ph-pencil-simple text-lg"></i>
-                                </button>
-                                <button onclick="archiveRoutineExercise('${ex.id}')" class="text-gray-500 hover:text-yellow-400 transition-colors p-2 rounded-lg hover:bg-yellow-900/20" title="Archivar">
-                                    <i class="ph ph-archive-box text-lg"></i>
-                                </button>
-                                <button onclick="deleteRoutineExercise('${ex.id}')" class="text-gray-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-900/20" title="Eliminar">
-                                    <i class="ph ph-trash text-lg"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-
-                    card.innerHTML = `
-                        <h4 class="font-bold text-gray-400 mb-3 border-b border-gray-800 pb-2 uppercase tracking-widest text-xs">${day}</h4>
-                        ${exHtml}
-                    `;
-                    container.appendChild(card);
-                }
-            });
-
-            if(container.innerHTML === '') {
-                container.innerHTML = `<div class="col-span-full bg-darker rounded-xl border border-gray-800 p-8 text-center"><p class="text-gray-500 text-sm">Tu rutina actual está vacía. Añade ejercicios arriba.</p></div>`;
-            }
-
-            // Render Archived
-            const arcContainer = document.getElementById('archivedListContainer');
-            if(!arcContainer) return;
-            arcContainer.innerHTML = '';
-            
-            if (window.routineData.archived.length === 0) {
-                arcContainer.innerHTML = `<p class="text-gray-500 text-sm text-center py-4">Aún no has archivado ningún ejercicio.</p>`;
-            } else {
-                window.routineData.archived.forEach(ex => {
-                    const dateObj = new Date(ex.archivedAt);
-                    const formattedDate = dateObj.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
-                    arcContainer.innerHTML += `
-                        <div class="flex justify-between items-center bg-darker p-3 rounded-xl border border-gray-800 opacity-70">
-                            <div>
-                                <p class="text-sm font-bold text-gray-400 line-through">${ex.name}</p>
-                                <p class="text-xs text-gray-500">${ex.day} • ${ex.muscle}</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold uppercase text-gray-500 bg-gray-800 px-2 py-1 rounded-md tracking-wider">Retirado: ${formattedDate}</span>
-                                <button onclick="deleteArchivedRoutineExercise('${ex.id}')" class="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-900/20" title="Eliminar definitivamente">
-                                    <i class="ph ph-trash text-base"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            updateSuggestions();
-        }
-
-        function updateSuggestions() {
-            const suggestionsContainer = document.getElementById('suggestionsContainer');
-            const suggestionsList = document.getElementById('suggestionsList');
-            if(!suggestionsContainer) return;
-
-            const dateVal = document.getElementById('inputDate').value;
-            if(!dateVal) { suggestionsContainer.classList.add('hidden'); return; }
-
-            const dateObj = new Date(dateVal);
-            dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
-            const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const dayStr = days[dateObj.getDay()];
-
-            const todayExercises = window.routineData.active.filter(ex => ex.day === dayStr);
-
-            if(todayExercises.length > 0) {
-                suggestionsContainer.classList.remove('hidden');
-                suggestionsList.innerHTML = todayExercises.map(ex => `
-                    <button type="button" onclick="loadSuggestion('${ex.name}', '${ex.muscle}')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors border border-gray-700 flex items-center">
-                        <i class="ph ph-plus mr-1"></i> ${ex.name}
-                    </button>
-                `).join('');
-            } else {
-                suggestionsContainer.classList.add('hidden');
-            }
-        }
-
-        function loadSuggestion(name, muscle) {
-            document.getElementById('inputName').value = name;
-            document.getElementById('inputMuscle').value = muscle;
-            
-            const inputName = document.getElementById('inputName');
-            inputName.classList.add('bg-blue-900/30', 'border-primary');
-            setTimeout(() => {
-                inputName.classList.remove('bg-blue-900/30', 'border-primary');
-            }, 500);
-        }
-
-        function handleMuscleChange() {
-            const selectedMuscle = document.getElementById('inputMuscle').value;
-            if(!window.routineData || !window.routineData.active) return;
-
-            const routineExercises = window.routineData.active.filter(ex => ex.muscle === selectedMuscle);
-            const uniqueNames = [...new Set(routineExercises.map(ex => ex.name))];
-
-            if (uniqueNames.length > 0) {
-                const list = document.getElementById('muscleSuggestionList');
-                list.innerHTML = uniqueNames.map(name => `
-                    <button type="button" onclick="loadSuggestion('${name}', '${selectedMuscle}'); closeMuscleSuggestionModal()" class="w-full text-left bg-darker hover:bg-gray-800 text-gray-200 text-sm font-semibold px-4 py-3 rounded-xl transition-colors border border-gray-700 flex items-center justify-between group">
-                        <span>${name}</span>
-                        <i class="ph ph-plus-circle text-primary opacity-0 group-hover:opacity-100 transition-opacity text-lg"></i>
-                    </button>
-                `).join('');
-                document.getElementById('muscleSuggestionModal').classList.remove('hidden');
-            }
-        }
-
-        function closeMuscleSuggestionModal() {
-            document.getElementById('muscleSuggestionModal').classList.add('hidden');
-        }
-
-        // Eliminar todos los registros
-        function deleteAllRecords() {
-            if(!confirm("⚠️ ¿Estás seguro? Esta acción borrará TODOS tus registros de la nube y localmente. Se recomienda descargar un respaldo primero.")) return;
-            if(!confirm("🔴 Última confirmación: ¿Realmente quieres borrar todo tu historial?")) return;
-
-            gymData = [];
-            localStorage.removeItem('hypertrack_gymData');
-
-            if(window.saveToDB) {
-                window.saveToDB();
-            }
-
-            if(window.refreshUI) window.refreshUI();
-            showToast("🗑️ Todos los registros eliminados");
-        }
-
-        // Init
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('inputDate').valueAsDate = new Date();
-            populateExerciseSelect();
-            initWorkoutState();
-            switchTab('dashboard');
-            renderRoutine();
-        });
-    </script>
-
-    <!-- MÓDULO DE BASE DE DATOS (SUPABASE) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    // 1. Pega aquí los valores obtenidos de Supabase
-    const SUPABASE_URL = 'https://qremwdvbhqvzbxtecvpj.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyZW13ZHZiaHF2emJ4dGVjdnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NDAyMDQsImV4cCI6MjEwNDIxNjIwNH0.gdEx2Lg8pZYKUHahtLs9n87yso6Y8jym7X58oZ-_dbk';
-
-    // Cargar respaldo local de inmediato mientras conecta la nube
-    const cached = localStorage.getItem('hypertrack_gymData');
-    if (cached) {
-        try { gymData = JSON.parse(cached); } catch(e) {}
-    }
-
-    try {
-        if (SUPABASE_URL !== 'TU_URL_DE_SUPABASE_AQUI' && !SUPABASE_URL.includes('tu-id-de-proyecto')) {
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-            const initDB = async () => {
-                // 1. Obtener sesiones desde Supabase
-                const { data, error } = await supabase
-                    .from('gym_sessions')
-                    .select('date, exercises')
-                    .order('date', { ascending: false });
-
-                let needsDbSync = false;
-
-                if (data && !error) {
-                    window.gymData = data.map(s => {
-                        if (s.exercises && s.exercises.length > 0 && s.exercises[0]._sessionDuration) {
-                            s.duration = s.exercises[0]._sessionDuration;
-                        }
-                        
-                        // Unificar nombres de ejercicios
-                        if (s.exercises) {
-                            s.exercises.forEach(ex => {
-                                const norm = ex.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                                if (norm === 'curl de biceps con barra recta' || norm === 'curl de bicep con barra recta') {
-                                    if (ex.name !== 'Curl de bicep con barra recta') {
-                                        ex.name = 'Curl de bicep con barra recta';
-                                        ex.muscle = 'Bicep';
-                                        needsDbSync = true;
-                                    }
-                                } else if (norm === 'copa en maquina' || norm === 'copa en maquina triceps') {
-                                    if (ex.name !== 'Copa en maquina triceps') {
-                                        ex.name = 'Copa en maquina triceps';
-                                        ex.muscle = 'Tricep';
-                                        needsDbSync = true;
-                                    }
-                                }
-                            });
-                        }
-                        
-                        return s;
-                    });
-                    
-                    localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
-                    if (window.refreshUI) window.refreshUI();
-                    
-                    if (window.populateExerciseSelect) window.populateExerciseSelect();
-                    if (window.updateChart) window.updateChart();
-                    
-                    showToast("☁️ Sesiones sincronizadas");
-                    
-                    if (needsDbSync) {
-                        setTimeout(() => { if (window.saveToDB) window.saveToDB(); }, 2000);
-                    }
-                }
-
-                // 2. Obtener rutina activa/archivada
-                const { data: rData } = await supabase
-                    .from('gym_routines')
-                    .select('data')
-                    .eq('id', 'my_routine')
-                    .single();
-
-                if (rData && rData.data) {
-                    window.routineData = rData.data;
-                    
-                    let needsRoutineSync = false;
-                    if (window.routineData.active) {
-                        window.routineData.active.forEach(ex => {
-                            const norm = ex.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                            if (norm === 'curl de biceps con barra recta' || norm === 'curl de bicep con barra recta') {
-                                if (ex.name !== 'Curl de bicep con barra recta') {
-                                    ex.name = 'Curl de bicep con barra recta';
-                                    ex.muscle = 'Bicep';
-                                    needsRoutineSync = true;
-                                }
-                            } else if (norm === 'copa en maquina' || norm === 'copa en maquina triceps') {
-                                if (ex.name !== 'Copa en maquina triceps') {
-                                    ex.name = 'Copa en maquina triceps';
-                                    ex.muscle = 'Tricep';
-                                    needsRoutineSync = true;
-                                }
-                            }
-                        });
-                    }
-                    
-                    if (window.renderRoutine) window.renderRoutine();
-                    
-                    if (needsRoutineSync) {
-                        setTimeout(() => { if (window.saveRoutineToDB) window.saveRoutineToDB(); }, 2500);
-                    }
-                }
-
-                // 3. Guardado atómico de sesión individual (Evita race conditions)
-                window.saveSingleSessionToDB = async (session) => {
-                    try {
-                        const exercisesCopy = JSON.parse(JSON.stringify(session.exercises));
-                        if (exercisesCopy.length > 0 && session.duration) {
-                            exercisesCopy[0]._sessionDuration = session.duration;
-                        }
-                        await supabase
-                            .from('gym_sessions')
-                            .upsert({ date: session.date, exercises: exercisesCopy }, { onConflict: 'date' });
-                    } catch(e) {
-                        console.error("Error al guardar sesión individual:", e);
-                    }
-                };
-
-                // 4. Eliminación puntual por fecha
-                window.deleteSessionFromDB = async (date) => {
-                    try {
-                        const { error } = await supabase
-                            .from('gym_sessions')
-                            .delete()
-                            .eq('date', date);
-                        if (error) console.error("Error al borrar en Supabase:", error);
-                    } catch(e) {
-                        console.error("Error de conexión al borrar:", e);
-                    }
-                };
-
-                // 5. Guardado global (para importación de Excel o creación de sesiones)
-                window.saveToDB = async () => {
-                    try {
-                        localStorage.setItem('hypertrack_gymData', JSON.stringify(window.gymData));
-
-                        const payload = window.gymData.map(s => {
-                            const copy = JSON.parse(JSON.stringify(s.exercises));
-                            if (copy.length > 0 && s.duration) copy[0]._sessionDuration = s.duration;
-                            return { date: s.date, exercises: copy };
-                        });
-
-                        if (payload.length > 0) {
-                            const { error } = await supabase
-                                .from('gym_sessions')
-                                .upsert(payload, { onConflict: 'date' });
-                            if (error) throw error;
-                        }
-                        showToast("☁️ Datos sincronizados");
-                    } catch(e) {
-                        console.error("Error sincronizando:", e);
-                        showToast("⚠️ Guardado localmente");
-                    }
-                };
-
-                // 6. Guardado de rutina
-                window.saveRoutineToDB = async () => {
-                    try {
-                        await supabase
-                            .from('gym_routines')
-                            .upsert({ id: 'my_routine', data: window.routineData }, { onConflict: 'id' });
-                    } catch(e) {
-                        console.error("Error guardando rutina:", e);
-                    }
-                };
-            };
-
-            initDB();
-        } else {
-            console.log("Supabase inactivo: coloca tus credenciales para sincronizar en la nube.");
-        }
-    } catch (e) {
-        console.error("Error inicializando Supabase:", e);
-    }
-</script>
+    <!-- INICIALIZADOR DE LA APLICACIÓN MODULAR ES6 -->
+    <script type="module" src="./src/app.js"></script>
+</body>
+</html>
