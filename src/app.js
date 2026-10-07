@@ -168,6 +168,14 @@ function clearAuthErrors() {
     if (el2) { el2.innerText = ''; el2.classList.add('hidden'); }
 }
 
+function fillAdminCredentials() {
+    const email = document.getElementById('loginEmail');
+    const pass = document.getElementById('loginPassword');
+    if (email) email.value = 'admin@trackgym.com';
+    if (pass) pass.value = 'TrackGym2026!';
+    UI.showToast("Credenciales de Administrador cargadas", "info");
+}
+
 async function handleLoginSubmit(e) {
     e.preventDefault();
     clearAuthErrors();
@@ -493,21 +501,21 @@ function addSetRow() {
     const div = document.createElement('div');
     div.className = "set-group mb-2";
     div.innerHTML = `
-        <div class="flex items-center gap-2 md:gap-3 set-row main-set">
-            <span class="text-gray-500 font-bold w-6 set-number">#${rowCount}</span>
-            <div class="flex-1 min-w-0">
-                <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
+        <div class="flex items-center gap-1.5 sm:gap-2 set-row main-set">
+            <span class="text-gray-500 font-bold w-6 text-center set-number flex-shrink-0 text-xs sm:text-sm">#${rowCount}</span>
+            <div class="w-16 sm:w-20 flex-shrink-0">
+                <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm text-center focus:border-primary outline-none reps-input">
             </div>
-            <span class="text-gray-500">x</span>
-            <div class="flex-[1.2] relative flex min-w-0">
-                <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
-                <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
+            <span class="text-gray-500 text-xs flex-shrink-0">x</span>
+            <div class="flex-1 min-w-0 flex items-stretch">
+                <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full min-w-0 bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm focus:border-primary outline-none weight-input">
+                <select class="w-12 sm:w-14 flex-shrink-0 bg-gray-800 border border-gray-700 border-l-0 text-white rounded-r-lg p-1 text-xs font-semibold outline-none focus:border-primary text-center unit-select">
                     <option value="kg">kg</option>
                     <option value="lbs">lbs</option>
                 </select>
             </div>
-            <button type="button" onclick="window.appHandler.addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
-            <button type="button" onclick="this.closest('.set-group').remove(); window.appHandler.recalcSets()" class="text-gray-600 hover:text-red-400 p-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
+            <button type="button" onclick="window.appHandler.addDropSet(this)" class="text-gray-400 hover:text-accent p-1.5 flex-shrink-0" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
+            <button type="button" onclick="this.closest('.set-group').remove(); window.appHandler.recalcSets()" class="text-gray-500 hover:text-red-400 p-1.5 flex-shrink-0" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
         </div>
         <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
     `;
@@ -520,21 +528,21 @@ function addDropSet(btn) {
     container.classList.remove('hidden');
 
     const dropDiv = document.createElement('div');
-    dropDiv.className = "flex items-center gap-2 md:gap-3 set-row drop-set";
+    dropDiv.className = "flex items-center gap-1.5 sm:gap-2 set-row drop-set";
     dropDiv.innerHTML = `
-        <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-        <div class="flex-1 min-w-0">
-            <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2.5 text-white text-sm focus:border-accent outline-none reps-input">
+        <span class="text-accent text-[10px] font-bold w-6 text-center flex-shrink-0">DS</span>
+        <div class="w-16 sm:w-20 flex-shrink-0">
+            <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm text-center focus:border-accent outline-none reps-input">
         </div>
-        <span class="text-gray-500 text-xs">x</span>
-        <div class="flex-[1.2] relative flex min-w-0">
-            <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-accent outline-none weight-input">
-            <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-accent unit-select">
+        <span class="text-gray-500 text-xs flex-shrink-0">x</span>
+        <div class="flex-1 min-w-0 flex items-stretch">
+            <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full min-w-0 bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 focus:border-accent outline-none weight-input">
+            <select class="w-12 sm:w-14 flex-shrink-0 bg-gray-800 border border-accent/50 border-l-0 text-white rounded-r-lg p-1 text-xs font-semibold outline-none focus:border-accent text-center unit-select">
                 <option value="kg">kg</option>
                 <option value="lbs">lbs</option>
             </select>
         </div>
-        <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
+        <button type="button" onclick="this.parentElement.remove()" class="text-gray-500 hover:text-red-400 p-1.5 flex-shrink-0"><i class="ph ph-x text-lg"></i></button>
     `;
     container.appendChild(dropDiv);
 }
@@ -839,39 +847,39 @@ function openEditExerciseModal(date, index) {
             groupNum++;
             setsHtml += `
                 <div class="set-group mb-2 border-b border-gray-800/50 pb-2">
-                    <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
-                        <span class="text-gray-500 font-bold w-6 edit-set-number">#${groupNum}</span>
-                        <div class="flex-1">
-                            <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
+                    <div class="flex items-center gap-1.5 sm:gap-2 mb-2 edit-set-row main-set">
+                        <span class="text-gray-500 font-bold w-6 text-center edit-set-number flex-shrink-0 text-xs sm:text-sm">#${groupNum}</span>
+                        <div class="w-16 sm:w-20 flex-shrink-0">
+                            <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm text-center edit-reps outline-none focus:border-primary">
                         </div>
-                        <span class="text-gray-500">x</span>
-                        <div class="flex-[1.2] relative flex min-w-0">
-                            <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
-                            <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
+                        <span class="text-gray-500 text-xs flex-shrink-0">x</span>
+                        <div class="flex-1 min-w-0 flex items-stretch">
+                            <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full min-w-0 bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
+                            <select class="w-12 sm:w-14 flex-shrink-0 bg-gray-800 border border-gray-700 border-l-0 text-white rounded-r-lg p-1 text-xs font-semibold edit-unit outline-none focus:border-primary text-center">
                                 <option value="kg" ${s.unit === 'kg' ? 'selected' : ''}>kg</option>
                                 <option value="lbs" ${s.unit === 'lbs' ? 'selected' : ''}>lbs</option>
                             </select>
                         </div>
-                        <button type="button" onclick="this.closest('.set-group').remove()" class="text-gray-600 hover:text-red-400 p-1 ml-1"><i class="ph ph-trash text-lg"></i></button>
+                        <button type="button" onclick="this.closest('.set-group').remove()" class="text-gray-500 hover:text-red-400 p-1.5 flex-shrink-0"><i class="ph ph-trash text-lg"></i></button>
                     </div>
                     <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3">
             `;
         } else {
             setsHtml += `
-                <div class="flex items-center gap-2 edit-set-row drop-set mb-2">
-                    <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-                    <div class="flex-1 min-w-0">
-                        <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
+                <div class="flex items-center gap-1.5 sm:gap-2 edit-set-row drop-set mb-2">
+                    <span class="text-accent text-[10px] font-bold w-6 text-center flex-shrink-0">DS</span>
+                    <div class="w-16 sm:w-20 flex-shrink-0">
+                        <input type="number" value="${s.reps}" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm text-center edit-reps outline-none focus:border-accent">
                     </div>
-                    <span class="text-gray-500 text-xs">x</span>
-                    <div class="flex-[1.2] relative flex min-w-0">
-                        <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
-                        <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
+                    <span class="text-gray-500 text-xs flex-shrink-0">x</span>
+                    <div class="flex-1 min-w-0 flex items-stretch">
+                        <input type="number" step="0.1" value="${s.weight}" placeholder="Peso" required min="0" class="w-full min-w-0 bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
+                        <select class="w-12 sm:w-14 flex-shrink-0 bg-gray-800 border border-accent/50 border-l-0 text-white rounded-r-lg p-1 text-xs font-semibold edit-unit outline-none focus:border-accent text-center">
                             <option value="kg" ${s.unit === 'kg' ? 'selected' : ''}>kg</option>
                             <option value="lbs" ${s.unit === 'lbs' ? 'selected' : ''}>lbs</option>
                         </select>
                     </div>
-                    <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
+                    <button type="button" onclick="this.parentElement.remove()" class="text-gray-500 hover:text-red-400 p-1.5 flex-shrink-0"><i class="ph ph-x text-lg"></i></button>
                 </div>
             `;
         }
@@ -892,7 +900,7 @@ function openEditExerciseModal(date, index) {
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Series y Drop Sets</label>
-                    <button type="button" onclick="window.appHandler.addEditSetRow()" class="text-xs text-primary hover:text-blue-400"><i class="ph ph-plus"></i> Serie</button>
+                    <button type="button" onclick="window.appHandler.addEditSetRow()" class="text-xs text-primary hover:text-blue-400 font-semibold"><i class="ph ph-plus"></i> Serie</button>
                 </div>
                 <div id="editSetsContainer" class="space-y-2 max-h-60 overflow-y-auto pr-1">
                     ${setsHtml}
@@ -915,23 +923,23 @@ function addEditSetRow() {
     const div = document.createElement('div');
     div.className = "set-group mb-2 border-b border-gray-800/50 pb-2";
     div.innerHTML = `
-        <div class="flex items-center gap-2 mb-2 edit-set-row main-set">
-            <span class="text-gray-500 font-bold w-6 edit-set-number">#${rowCount}</span>
-            <div class="flex-1 min-w-0">
-                <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-primary">
+        <div class="flex items-center gap-1.5 sm:gap-2 mb-2 edit-set-row main-set">
+            <span class="text-gray-500 font-bold w-6 text-center edit-set-number flex-shrink-0 text-xs sm:text-sm">#${rowCount}</span>
+            <div class="w-16 sm:w-20 flex-shrink-0">
+                <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm text-center edit-reps outline-none focus:border-primary">
             </div>
-            <span class="text-gray-500">x</span>
-            <div class="flex-[1.2] relative flex min-w-0">
-                <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
-                <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-primary">
+            <span class="text-gray-500 text-xs flex-shrink-0">x</span>
+            <div class="flex-1 min-w-0 flex items-stretch">
+                <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full min-w-0 bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-primary">
+                <select class="w-12 sm:w-14 flex-shrink-0 bg-gray-800 border border-gray-700 border-l-0 text-white rounded-r-lg p-1 text-xs font-semibold edit-unit outline-none focus:border-primary text-center">
                     <option value="kg">kg</option>
                     <option value="lbs">lbs</option>
                 </select>
             </div>
-            <button type="button" onclick="this.closest('.set-group').remove()" class="text-gray-600 hover:text-red-400 p-1 ml-1"><i class="ph ph-trash text-lg"></i></button>
+            <button type="button" onclick="this.closest('.set-group').remove()" class="text-gray-500 hover:text-red-400 p-1.5 flex-shrink-0"><i class="ph ph-trash text-lg"></i></button>
         </div>
         <div class="drop-sets-container flex flex-col gap-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
-        <button type="button" onclick="window.appHandler.addEditDropSet(this)" class="text-xs text-accent mt-1 ml-3"><i class="ph ph-plus"></i> Drop Set</button>
+        <button type="button" onclick="window.appHandler.addEditDropSet(this)" class="text-xs text-accent mt-1 ml-3 font-semibold"><i class="ph ph-plus"></i> Drop Set</button>
     `;
     container.appendChild(div);
 }
@@ -940,21 +948,21 @@ function addEditDropSet(btn) {
     const container = btn.parentElement.querySelector('.drop-sets-container');
     container.classList.remove('hidden');
     const dropDiv = document.createElement('div');
-    dropDiv.className = "flex items-center gap-2 edit-set-row drop-set mb-2";
+    dropDiv.className = "flex items-center gap-1.5 sm:gap-2 edit-set-row drop-set mb-2";
     dropDiv.innerHTML = `
-        <span class="text-accent text-[10px] font-bold w-6 flex-shrink-0">DS</span>
-        <div class="flex-1 min-w-0">
-            <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm edit-reps outline-none focus:border-accent">
+        <span class="text-accent text-[10px] font-bold w-6 text-center flex-shrink-0">DS</span>
+        <div class="w-16 sm:w-20 flex-shrink-0">
+            <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-accent/50 rounded-lg p-2 text-white text-sm text-center edit-reps outline-none focus:border-accent">
         </div>
-        <span class="text-gray-500 text-xs">x</span>
-        <div class="flex-[1.2] relative flex min-w-0">
-            <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
-            <select class="bg-gray-800 border border-accent/50 text-white rounded-r-lg p-2 text-sm edit-unit outline-none focus:border-accent">
+        <span class="text-gray-500 text-xs flex-shrink-0">x</span>
+        <div class="flex-1 min-w-0 flex items-stretch">
+            <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full min-w-0 bg-dark border border-accent/50 rounded-l-lg p-2 text-white text-sm border-r-0 edit-weight outline-none focus:border-accent">
+            <select class="w-12 sm:w-14 flex-shrink-0 bg-gray-800 border border-accent/50 border-l-0 text-white rounded-r-lg p-1 text-xs font-semibold edit-unit outline-none focus:border-accent text-center">
                 <option value="kg">kg</option>
                 <option value="lbs">lbs</option>
             </select>
         </div>
-        <button type="button" onclick="this.parentElement.remove()" class="text-gray-600 hover:text-red-400 p-1"><i class="ph ph-x"></i></button>
+        <button type="button" onclick="this.parentElement.remove()" class="text-gray-500 hover:text-red-400 p-1.5 flex-shrink-0"><i class="ph ph-x text-lg"></i></button>
     `;
     container.appendChild(dropDiv);
 }
@@ -1255,6 +1263,7 @@ window.appHandler = {
     openAuthModal,
     closeAuthModal,
     switchAuthTab,
+    fillAdminCredentials,
     handleSignOut,
     startWorkout,
     finishWorkout,

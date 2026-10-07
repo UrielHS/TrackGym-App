@@ -36,25 +36,25 @@ TrackGym-App/
 
 ## 🚀 Guía Paso a Paso para Despliegue en Supabase + Vercel
 
-### Paso 1: Configurar Supabase y Ejecutar la Migración SQL
+### Paso 1: Configurar Supabase y Crear la Cuenta Admin (1-Click)
 
+Tienes dos opciones según prefieras:
+
+#### Opción A: Creación Inmediata 1-Click (Recomendada)
 1. Entra a tu consola de [Supabase Dashboard](https://supabase.com/dashboard) y selecciona tu proyecto.
 2. Ve al menú lateral **SQL Editor** y haz clic en **New Query**.
-3. Abre el archivo [`supabase/migration.sql`](file:///c:/Users/Uriel/Documents/GitHub2/TrackGym-App/supabase/migration.sql) de este repositorio y copia todo su contenido.
-4. **VINCULACIÓN HISTÓRICA DEL USUARIO CREADOR (ADMIN):**
-   - Si ya tienes un usuario creado en tu proyecto de Supabase, ve a **Authentication > Users** y copia tu **User UID** (un identificador con formato `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).
-   - Al final del script `supabase/migration.sql`, localiza la variable:
-     ```sql
-     TARGET_USER_ID UUID := '00000000-0000-0000-0000-000000000000'::uuid;
-     ```
-   - Reemplaza ese valor con tu UUID copiado.
-   - Si aún no te has registrado en Supabase, ejecuta el script completo; luego crea tu cuenta en la app y vuelve a correr únicamente el bloque `DO $$ ... $$` con tu nuevo UUID.
-5. Haz clic en **Run** en el SQL Editor de Supabase.
-   - Se creará la tabla `profiles` con su trigger automático sobre `auth.users`.
-   - Se actualizará `gym_sessions` con `user_id` y restricción única `(user_id, date)`.
-   - Se creará `gym_routines` con clave primaria compuesta `(user_id, id)`.
-   - Se activará **Row Level Security (RLS)** estricto en todas las tablas.
-   - Todos los datos históricos precargados quedarán vinculados a tu cuenta sin perder ni truncar ningún dato.
+3. Abre el archivo [`supabase/seed_admin_account.sql`](file:///c:/Users/Uriel/Documents/GitHub2/TrackGym-App/supabase/seed_admin_account.sql), copia todo su contenido y haz clic en **Run**.
+4. ¡Listo! Esto crea tu usuario administrador con correo confirmado y le vincula e inserta todos tus entrenamientos históricos y rutinas:
+   - **Email:** `admin@trackgym.com`
+   - **Contraseña:** `TrackGym2026!`
+   - *(Puedes cambiar el correo o contraseña editando las variables al inicio del script antes de correrlo).*
+5. En la app web, en el modal de login simplemente pulsa **"Cargar credenciales Admin (Uriel)"** e ingresa con un solo clic.
+
+#### Opción B: Si prefieres registrar tu propio email manualmente
+1. Ejecuta primero [`supabase/migration.sql`](file:///c:/Users/Uriel/Documents/GitHub2/TrackGym-App/supabase/migration.sql) en el SQL Editor.
+2. Regístrate desde la app o en **Authentication > Users** con tu correo personal.
+3. Copia tu nuevo **User UID**.
+4. Al final de `supabase/migration.sql`, coloca tu UUID en `TARGET_USER_ID` y ejecuta el bloque `DO $$ ... $$` para enlazar tus datos históricos.
 
 ---
 

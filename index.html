@@ -200,6 +200,11 @@
                     <button type="submit" id="btnLoginSubmit" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center">
                         <i class="ph ph-sign-in mr-2"></i> Iniciar Sesión
                     </button>
+                    <div class="pt-3 border-t border-gray-800 text-center">
+                        <button type="button" onclick="window.appHandler.fillAdminCredentials()" class="text-xs text-primary hover:text-blue-400 font-semibold inline-flex items-center justify-center transition-colors">
+                            <i class="ph ph-key mr-1.5 text-sm"></i> Cargar credenciales Admin (Uriel)
+                        </button>
+                    </div>
                 </form>
 
                 <!-- Formulario Crear Cuenta -->
@@ -596,21 +601,21 @@
                         </div>
                         <div id="setsContainer" class="space-y-3">
                             <div class="set-group mb-2">
-                                <div class="flex items-center gap-2 md:gap-3 set-row main-set">
-                                    <span class="text-gray-500 font-bold w-6 set-number">#1</span>
-                                    <div class="flex-1 min-w-0">
-                                        <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none reps-input">
+                                <div class="flex items-center gap-1.5 sm:gap-2 set-row main-set">
+                                    <span class="text-gray-500 font-bold w-6 text-center set-number flex-shrink-0 text-xs sm:text-sm">#1</span>
+                                    <div class="w-16 sm:w-20 flex-shrink-0">
+                                        <input type="number" placeholder="Reps" required min="1" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white text-sm text-center focus:border-primary outline-none reps-input">
                                     </div>
-                                    <span class="text-gray-500">x</span>
-                                    <div class="flex-[1.2] relative flex min-w-0">
-                                        <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full bg-dark border border-gray-700 rounded-l-lg p-2.5 text-white text-sm border-r-0 focus:border-primary outline-none weight-input">
-                                        <select class="bg-gray-800 border border-gray-700 text-white rounded-r-lg p-2.5 text-sm outline-none focus:border-primary unit-select">
+                                    <span class="text-gray-500 text-xs flex-shrink-0">x</span>
+                                    <div class="flex-1 min-w-0 flex items-stretch">
+                                        <input type="number" step="0.1" placeholder="Peso" required min="0" class="w-full min-w-0 bg-dark border border-gray-700 rounded-l-lg p-2 text-white text-sm focus:border-primary outline-none weight-input">
+                                        <select class="w-12 sm:w-14 flex-shrink-0 bg-gray-800 border border-gray-700 border-l-0 text-white rounded-r-lg p-1 text-xs font-semibold outline-none focus:border-primary text-center unit-select">
                                             <option value="kg">kg</option>
                                             <option value="lbs">lbs</option>
                                         </select>
                                     </div>
-                                    <button type="button" onclick="addDropSet(this)" class="text-gray-500 hover:text-accent p-1 ml-1" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
-                                    <button type="button" onclick="this.closest('.set-group').remove(); window.appHandler.recalcSets()" class="text-gray-600 hover:text-red-400 p-1" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
+                                    <button type="button" onclick="window.appHandler.addDropSet(this)" class="text-gray-400 hover:text-accent p-1.5 flex-shrink-0" title="Añadir Drop Set"><i class="ph ph-arrow-bend-right-down text-lg"></i></button>
+                                    <button type="button" onclick="this.closest('.set-group').remove(); window.appHandler.recalcSets()" class="text-gray-500 hover:text-red-400 p-1.5 flex-shrink-0" title="Eliminar Serie"><i class="ph ph-trash text-lg"></i></button>
                                 </div>
                                 <div class="drop-sets-container flex flex-col gap-2 mt-2 pl-4 border-l-2 border-accent/30 ml-3 hidden"></div>
                             </div>
